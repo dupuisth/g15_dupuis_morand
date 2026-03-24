@@ -12,6 +12,7 @@ public class ClientApp {
 
     private String serverHostname;
     private int serverPort;
+    private Connection connection;
 
     public ClientApp(String[] args) {
         serverHostname = null;
@@ -36,15 +37,20 @@ public class ClientApp {
         if (this.serverPort <= 0) {
             this.serverPort = CliHelper.inputInt("Enter the server port", 2222, 8888);
         }
+
+        this.connection = new Connection(this.serverHostname, this.serverPort);
     }
 
     public ClientApp(String serverHostname, int serverPort) {
         this.serverHostname = serverHostname;
         this.serverPort = serverPort;
+        this.connection = new Connection(this.serverHostname, this.serverPort);
     }
 
     public void run() {
         LOGGER.info("Started new ClientApp");
+
+        connection.start();
     }
 
     @Override
