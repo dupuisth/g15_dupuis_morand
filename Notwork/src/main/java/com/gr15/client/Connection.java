@@ -43,8 +43,7 @@ public class Connection {
         return out;
     }
 
-    public boolean isConnected()
-    {
+    public boolean isConnected() {
         return socket.isConnected();
     }
 }

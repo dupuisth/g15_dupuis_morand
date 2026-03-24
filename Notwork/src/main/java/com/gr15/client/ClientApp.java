@@ -50,13 +50,21 @@ public class ClientApp {
     public void run() {
         LOGGER.info("Started new ClientApp");
 
-        while (!connection.isConnected())
-        {
+        while (!connection.isConnected()) {
             connection.start();
         }
 
         // Send a message
-        connection.getOut().println("Le C4C4");
+        for (int i = 0; i < 15; i++) {
+            connection.getOut().println("Le C4C4 (" + i + ")");
+            try{
+                Thread.sleep(2000);
+
+            } catch (Exception e)
+            {
+
+            }
+        }
     }
 
     @Override

@@ -1,7 +1,5 @@
 package com.gr15.server;
 
-import com.gr15.client.ClientApp;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,5 +36,10 @@ public class ConnectionToClient {
 
     public BufferedReader getIn() {
         return in;
+    }
+
+    public boolean isConnected()
+    {
+        return socket.isConnected();
     }
 }

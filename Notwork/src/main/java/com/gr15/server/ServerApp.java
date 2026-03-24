@@ -99,8 +99,7 @@ public class ServerApp {
                 }
             }
 
-            if (connectionToClient == null)
-            {
+            if (connectionToClient == null) {
                 // Error while binding the client, ignore him
                 continue;
             }
@@ -108,20 +107,9 @@ public class ServerApp {
             // Add it to the clients list
             connectionsToClient.add(connectionToClient);
 
-            while (true)
-            {
-
-            try {
-                String input = connectionToClient.getIn().readLine();
-                LOGGER.info("Received message: " + input);
-
-                Thread.sleep(1000);
-            } catch (Exception e)
-            {
-                // CACA
-            }
-
-            }
+            // Start the handler
+            ClientHandler clientHandler = new ClientHandler(connectionToClient);
+            clientHandler.start();
         }
 
         // Destroy the objects
