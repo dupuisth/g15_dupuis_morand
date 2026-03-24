@@ -11,7 +11,9 @@ import java.util.logging.Logger;
 public class ServerApp {
     public static final String SERVER_ID_KEY = "serverId=";
     public static final String SERVER_PORT_KEY = "port=";
+
     private static final Logger LOGGER = Logger.getLogger(ServerApp.class.getName());
+
     private boolean isStopping = false;
     private int port;
     private int serverId;
@@ -108,7 +110,7 @@ public class ServerApp {
             connectionsToClient.add(connectionToClient);
 
             // Start the handler
-            ClientHandler clientHandler = new ClientHandler(connectionToClient);
+            ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
             clientHandler.start();
         }
 
@@ -132,6 +134,28 @@ public class ServerApp {
 
     public int getServerId() {
         return serverId;
+    }
+
+    public ArrayList<ConnectionToClient> getConnectionsToClient() {
+        return connectionsToClient;
+    }
+
+    /**
+     * Send to all the clients
+     */
+    public void broadcast(String message)
+    {
+        // Send a message to all the clients
+        synchronized (getConnectionsToClient())
+        {
+            for (ConnectionToClient connectionToClient : getConnectionsToClient())
+            {
+                synchronized (connectionToClient.getOut())
+                {
+                    connectionToClient.getOut().println(message);
+                }
+            }
+        }
     }
 
     @Override

@@ -1,16 +1,19 @@
 package com.gr15.server;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class ClientHandler extends Thread {
     private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
 
-
     private ConnectionToClient connectionToClient;
+    private ServerApp server;
 
-    public ClientHandler(ConnectionToClient connectionToClient)  {
+    public ClientHandler(ConnectionToClient connectionToClient, ServerApp server)  {
         this.connectionToClient = connectionToClient;
+        this.server = server;
     }
 
     @Override
@@ -22,6 +25,10 @@ public class ClientHandler extends Thread {
         {
             String message = getMessage();
             LOGGER.info("Received message from inet=" + connectionToClient.getSocket().getInetAddress() + ", message=\""+message + "\"");
+
+            // Broadcast to all other clients
+            server.broadcast(message);
+
         }
     }
 
@@ -30,7 +37,6 @@ public class ClientHandler extends Thread {
         String message = null;
         while (message == null)
         {
-            // Block connectionToClient.getIn() => Si d'autres process veulent le pipe, alors ils seront en attentes
             synchronized (connectionToClient.getIn())
             {
                 try {
