@@ -1,6 +1,9 @@
 package com.gr15.client;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -11,6 +14,8 @@ public class Connection {
 
     private Socket socket;
     private SocketAddress socketAddress;
+    private PrintWriter out;
+    private BufferedReader in;
 
     public Connection(String serverHostname, int port) {
         this.socket = new Socket();
@@ -19,22 +24,27 @@ public class Connection {
 
     public void start() {
         try {
+            LOGGER.info("Trying to connect to inet=" + socketAddress);
             socket.connect(socketAddress);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         } catch (IOException e) {
             LOGGER.warning("Failed to create the client socket " + e.getMessage());
         }
 
         LOGGER.info("Connected to server !");
+    }
 
-        while (true)
-        {
-            try {
-                Thread.sleep(1000);
+    public BufferedReader getIn() {
+        return in;
+    }
 
-            } catch (Exception e)
-            {
+    public PrintWriter getOut() {
+        return out;
+    }
 
-            }
-        }
+    public boolean isConnected()
+    {
+        return socket.isConnected();
     }
 }

@@ -85,10 +85,43 @@ public class ServerApp {
             LOGGER.info("New client! inet=" + socket.getInetAddress() + " port=" + socket.getPort());
 
             // Create a new connection
-            ConnectionToClient connectionToClient = new ConnectionToClient(socket);
+            ConnectionToClient connectionToClient = null;
+            try {
+                connectionToClient = new ConnectionToClient(socket);
+
+            } catch (IOException e) {
+                LOGGER.warning("Failed to bind new client, disconnecting him");
+
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    LOGGER.warning("Failed to close the connection");
+                }
+            }
+
+            if (connectionToClient == null)
+            {
+                // Error while binding the client, ignore him
+                continue;
+            }
 
             // Add it to the clients list
             connectionsToClient.add(connectionToClient);
+
+            while (true)
+            {
+
+            try {
+                String input = connectionToClient.getIn().readLine();
+                LOGGER.info("Received message: " + input);
+
+                Thread.sleep(1000);
+            } catch (Exception e)
+            {
+                // CACA
+            }
+
+            }
         }
 
         // Destroy the objects
