@@ -1,6 +1,7 @@
 package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
+import com.gr15.common.Message;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -59,6 +60,11 @@ public class ServerApp {
 
     public void run() {
         LOGGER.info("Started new ServerApp");
+
+        // Send the Hello Message to the client
+        Message message = new Message(Message.STC_HELLO);
+        message.AddString("Salut !");
+        LOGGER.info(message.getDataAsBitsInString());
 
         if (serverSocket != null) {
             LOGGER.warning("Server already started");
@@ -138,24 +144,6 @@ public class ServerApp {
 
     public ArrayList<ConnectionToClient> getConnectionsToClient() {
         return connectionsToClient;
-    }
-
-    /**
-     * Send to all the clients
-     */
-    public void broadcast(String message)
-    {
-        // Send a message to all the clients
-        synchronized (getConnectionsToClient())
-        {
-            for (ConnectionToClient connectionToClient : getConnectionsToClient())
-            {
-                synchronized (connectionToClient.getOut())
-                {
-                    connectionToClient.getOut().println(message);
-                }
-            }
-        }
     }
 
     @Override

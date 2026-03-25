@@ -1,8 +1,6 @@
 package com.gr15.server;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 
 public class ClientHandler extends Thread {
@@ -11,7 +9,7 @@ public class ClientHandler extends Thread {
     private ConnectionToClient connectionToClient;
     private ServerApp server;
 
-    public ClientHandler(ConnectionToClient connectionToClient, ServerApp server)  {
+    public ClientHandler(ConnectionToClient connectionToClient, ServerApp server) {
         this.connectionToClient = connectionToClient;
         this.server = server;
     }
@@ -21,13 +19,8 @@ public class ClientHandler extends Thread {
         super.run();
 
         // Listen to the client
-        while (connectionToClient.isConnected())
-        {
-            String message = getMessage();
-            LOGGER.info("Received message from inet=" + connectionToClient.getSocket().getInetAddress() + ", message=\""+message + "\"");
+        while (connectionToClient.isConnected()) {
 
-            // Broadcast to all other clients
-            server.broadcast(message);
 
         }
     }
@@ -35,10 +28,8 @@ public class ClientHandler extends Thread {
     private String getMessage() {
 
         String message = null;
-        while (message == null)
-        {
-            synchronized (connectionToClient.getIn())
-            {
+        while (message == null) {
+            synchronized (connectionToClient.getIn()) {
                 try {
                     message = connectionToClient.getIn().readLine();
                 } catch (IOException e) {

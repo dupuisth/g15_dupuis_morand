@@ -14,10 +14,6 @@ public class ClientApp {
     private int serverPort;
     private Connection connection;
 
-    public Connection getConnection() {
-        return connection;
-    }
-
     public ClientApp(String[] args) {
         serverHostname = null;
         serverPort = -1;
@@ -51,6 +47,10 @@ public class ClientApp {
         this.connection = new Connection(this.serverHostname, this.serverPort);
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     public void run() {
         LOGGER.info("Started new ClientApp");
 
@@ -63,20 +63,15 @@ public class ClientApp {
         ListeningThread listeningThread = new ListeningThread(this);
         listeningThread.start();
 
-        // Send a message
-        for (int i = 0; i < 15; i++) {
-            connection.getOut().println("Le C4C4 (" + i + ")");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
+        // Prompt for a message
+        while (connection.isConnected()) {
+            // Take the client input
+            String message = CliHelper.inputString("What do you want to say ?", 0, 0);
 
-            }
-            
         }
     }
 
-    public void onMessageReceived(String message)
-    {
+    public void onMessageReceived(String message) {
         LOGGER.info("Message received : " + message);
     }
 

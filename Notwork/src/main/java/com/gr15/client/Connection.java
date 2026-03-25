@@ -22,7 +22,7 @@ public class Connection {
         this.socketAddress = new InetSocketAddress(serverHostname, port);
     }
 
-    public void start() {
+    public boolean start() {
         try {
             LOGGER.info("Trying to connect to inet=" + socketAddress);
             socket.connect(socketAddress);
@@ -30,9 +30,11 @@ public class Connection {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         } catch (IOException e) {
             LOGGER.warning("Failed to create the client socket " + e.getMessage());
+            return false;
         }
 
         LOGGER.info("Connected to server !");
+        return true;
     }
 
     public BufferedReader getIn() {
