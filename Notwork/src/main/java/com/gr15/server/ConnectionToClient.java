@@ -48,6 +48,6 @@ public class ConnectionToClient {
     }
 
     public boolean isConnected() {
-        return socket.isConnected();
+        return socket != null && socket.isConnected() && !socket.isClosed();
     }
 }
