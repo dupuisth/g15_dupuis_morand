@@ -1,14 +1,11 @@
 package com.gr15.client;
 
 import com.gr15.common.Message;
-import com.gr15.server.ServerApp;
 
-import java.io.DataInputStream;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 public class ListeningThread extends Thread {
-    private static final Logger LOGGER = Logger.getLogger(ServerApp.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ListeningThread.class.getName());
     private ClientApp client;
 
     public ListeningThread(ClientApp client) {
@@ -22,7 +19,7 @@ public class ListeningThread extends Thread {
             // Continuous listening
             while (client.getConnection().isConnected()) {
                 try {
-                    Message message = readMessage();
+                    Message message = Message.readMessageFromSocket(client.getConnection().getIn());
                     client.onMessageReceived(message);
                 } catch (Exception e) {
                     LOGGER.warning("Error while trying to read message ! e=" + e.getMessage());
@@ -35,20 +32,5 @@ public class ListeningThread extends Thread {
                 }
             }
         }
-
-
-    private Message readMessage() throws IOException {
-        DataInputStream in = client.getConnection().getIn();
-
-        // Read the length
-        int length = in.readInt();
-
-        // Read the message
-        byte[] messageBytes = new byte[length];
-        in.readFully(messageBytes);
-
-        // Build the message from the bytes
-        return new Message(messageBytes);
-    }
 
 }

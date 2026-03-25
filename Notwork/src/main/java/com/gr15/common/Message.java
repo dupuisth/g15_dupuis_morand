@@ -1,5 +1,8 @@
 package com.gr15.common;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
@@ -168,5 +171,31 @@ public class Message {
 
     public int getWrittenByte() {
         return Math.ceilDiv(writtenBit, Converter.BITS_PER_BYTE);
+    }
+
+    public static Message readMessageFromSocket(DataInputStream in) throws IOException {
+        // Read the length
+        int length = in.readInt();
+
+        // Read the message
+        byte[] messageBytes = new byte[length];
+        in.readFully(messageBytes);
+
+        // Build the message from the bytes
+        return new Message(messageBytes);
+    }
+
+    public static void sendMessageToSocket(DataOutputStream out, Message message) throws IOException {
+        // Get the total bytes written
+        int length = message.getWrittenByte();
+
+        // Send it
+        out.writeInt(length);
+
+        // Then send all the data
+        out.write(message.getData(), 0, length);
+
+        // And assure the message is fully sent
+        out.flush();
     }
 }

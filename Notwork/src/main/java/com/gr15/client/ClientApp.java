@@ -75,6 +75,14 @@ public class ClientApp {
         while (connection.isConnected()) {
             // Take the client input
 
+            String input = CliHelper.inputString("What do you want to say ?", 0, 0);
+            Message message = new Message(Message.CTS_MESSAGE);
+            message.AddString(input);
+            try {
+                Message.sendMessageToSocket(connection.getOut(), message);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to send message to server e=" + e.getMessage());
+            }
         }
     }
 

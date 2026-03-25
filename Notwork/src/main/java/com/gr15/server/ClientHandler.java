@@ -33,37 +33,14 @@ public class ClientHandler extends Thread {
         // Listen to the client
         int i = 0;
         while (connectionToClient.isConnected()) {
-            try
-            {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-
-            Message mes = new Message((byte)1);
-            mes.AddInt(i++, 5);
-
+            // Read
             try {
-                connectionToClient.send(mes);
+                Message readMessage = Message.readMessageFromSocket(connectionToClient.getIn());
+                LOGGER.info("Received a message ! length=" + readMessage.getWrittenByte());
             } catch (IOException e) {
-                LOGGER.warning("Failed to send the message !");
+                LOGGER.warning("Failed to read message e=" + e.getMessage());
             }
         }
-    }
-
-    private String getMessage() {
-
-        String message = null;
-        while (message == null) {
-            synchronized (connectionToClient.getIn()) {
-                try {
-                    message = connectionToClient.getIn().readLine();
-                } catch (IOException e) {
-                    // Do nothing
-                }
-            }
-        }
-        return message;
     }
 
     public ConnectionToClient getConnectionToClient() {
