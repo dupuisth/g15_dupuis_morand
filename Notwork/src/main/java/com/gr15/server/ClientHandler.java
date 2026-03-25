@@ -1,5 +1,7 @@
 package com.gr15.server;
 
+import com.gr15.common.Message;
+
 import java.io.IOException;
 import java.util.logging.Logger;
 
@@ -18,10 +20,34 @@ public class ClientHandler extends Thread {
     public void run() {
         super.run();
 
+        // Send a welcome message !
+        Message message = new Message((byte)1);
+        message.AddInt(0xA0, 8);
+
+        try {
+            connectionToClient.send(message);
+        } catch (IOException e) {
+            LOGGER.warning("Failed to send the message !");
+        }
+
         // Listen to the client
+        int i = 0;
         while (connectionToClient.isConnected()) {
+            try
+            {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
+            Message mes = new Message((byte)1);
+            mes.AddInt(i++, 5);
 
+            try {
+                connectionToClient.send(mes);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to send the message !");
+            }
         }
     }
 

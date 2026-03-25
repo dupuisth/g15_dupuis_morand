@@ -2,10 +2,7 @@ package com.gr15.server;
 
 import com.gr15.common.Message;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -15,17 +12,14 @@ public class ConnectionToClient {
     private static final Logger LOGGER = Logger.getLogger(ConnectionToClient.class.getName());
 
     private Socket socket;
-    private SocketChannel channel;
-    private OutputStream out;
-    private BufferedReader in;
+    private DataOutputStream out;
+    private DataInputStream in;
 
     public ConnectionToClient(Socket socket) throws IOException {
         this.socket = socket;
         try {
-            this.channel = socket.getChannel();
-            this.out = socket.getOutputStream();
-            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+            this.out = new DataOutputStream(socket.getOutputStream());
+            this.in = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
             LOGGER.warning("Failed to bind socket output/input");
             throw e;
@@ -33,33 +27,23 @@ public class ConnectionToClient {
     }
 
     public void send(Message message) throws IOException {
-        // Write the length
-        ByteBuffer lengthBuffer = ByteBuffer.allocate(32);
-        lengthBuffer.putInt(message.getData().length);
-        lengthBuffer.flip();
+        int length = message.getWrittenByte();
+        out.writeInt(length);
+        out.write(message.getData(), 0, length);
+        out.flush();
 
-        synchronized (channel) {
-            while (lengthBuffer.hasRemaining()) {
-                channel.write(lengthBuffer);
-            }
-
-            ByteBuffer dataBuffer = ByteBuffer.wrap(message.getData());
-            while (dataBuffer.hasRemaining()) {
-                channel.write(dataBuffer);
-            }
-        }
-
+        LOGGER.info("Sent a message to client:\nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
     }
 
     public Socket getSocket() {
         return socket;
     }
 
-    public OutputStream getOut() {
+    public DataOutputStream getOut() {
         return out;
     }
 
-    public BufferedReader getIn() {
+    public DataInputStream getIn() {
         return in;
     }
 

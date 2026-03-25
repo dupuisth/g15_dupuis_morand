@@ -40,4 +40,13 @@ public class Converter {
             array[pos] |= bitValue;
         }
     }
+
+    public static int BytesToInt(byte[] bytes) {
+        int result = 0;
+        for (int i = 0; i < bytes.length; i++)
+        {
+            result |= bytes[i] << (i * BITS_PER_BYTE);
+        }
+        return result;
+    }
 }

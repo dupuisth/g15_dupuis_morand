@@ -1,7 +1,9 @@
 package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
+import com.gr15.common.Message;
 
+import java.io.IOException;
 import java.util.logging.Logger;
 
 public class ClientApp {
@@ -56,6 +58,12 @@ public class ClientApp {
 
         while (!connection.isConnected()) {
             connection.start();
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                return;
+            }
         }
 
         // Open the listening thread
@@ -66,13 +74,12 @@ public class ClientApp {
         // Prompt for a message
         while (connection.isConnected()) {
             // Take the client input
-            String message = CliHelper.inputString("What do you want to say ?", 0, 0);
 
         }
     }
 
-    public void onMessageReceived(String message) {
-        LOGGER.info("Message received : " + message);
+    public void onMessageReceived(Message message) {
+        LOGGER.info("New message received : \nlength=" + message.getData().length + "\ndata=" + message.getDataAsBitsInString());
     }
 
     @Override

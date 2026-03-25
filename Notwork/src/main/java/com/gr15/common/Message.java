@@ -5,16 +5,26 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 public class Message {
+    private static final Logger LOGGER = Logger.getLogger(Message.class.getName());
+
+    // Server --> Client
     public static final byte STC_HELLO = 0;
     public static final byte STC_BROADCAST = 2;
     public static final byte STC_PING = 3;
+
+    // Client --> Server
     public static final byte CTS_PONG = 0;
     public static final byte CTS_MESSAGE = 1;
+
+    // Length
     public static final int MESSAGE_ID_BITS = 4;
+    public static final int MESSAGE_HEADER_BITS = 16;
+
+    // Config
     public static final Charset ENCODING_CHARSET = StandardCharsets.UTF_8;
-    public static final int MAX_SIZE = 64;
-    private static final Logger LOGGER = Logger.getLogger(Message.class.getName());
-    private byte[] data = new byte[MAX_SIZE];
+
+    public static final int MAX_SIZE_BYTES = 64;
+    private byte[] data = new byte[MAX_SIZE_BYTES];
     /**
      * How many bits have been written
      */
@@ -30,6 +40,12 @@ public class Message {
         readBit = 0;
 
         AddBits(messageId, MESSAGE_ID_BITS);
+    }
+
+    public Message(byte[] aBytes) {
+        this.data = aBytes;
+        this.writtenBit = data.length * Converter.BITS_PER_BYTE; // Approximate
+        this.readBit = 0;
     }
 
     public byte[] getData() {
@@ -110,6 +126,22 @@ public class Message {
     }
 
     public int getUnwrittenBits() {
-        return MAX_SIZE * Converter.BITS_PER_BYTE - writtenBit;
+        return MAX_SIZE_BYTES * Converter.BITS_PER_BYTE - writtenBit;
+    }
+
+    public int getUnreadenBits() {
+        return writtenBit - readBit;
+    }
+
+    public int getWrittenBit() {
+        return writtenBit;
+    }
+
+    public int getReadBit() {
+        return readBit;
+    }
+
+    public int getWrittenByte() {
+        return Math.ceilDiv(writtenBit, Converter.BITS_PER_BYTE);
     }
 }
