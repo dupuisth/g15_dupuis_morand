@@ -87,7 +87,7 @@ public class Message {
             throw new RuntimeException("Message will be too big !");
         }
 
-        byte mask = (byte) (0xFFFFFFFF >> (Converter.BITS_PER_INTEGER - amount));
+        int mask = (0xFFFFFFFF >> (Converter.BITS_PER_INTEGER - amount));
         bitfield &= mask;
         Converter.IntToBits(bitfield, data, writtenBit);
         writtenBit += amount;
@@ -109,6 +109,31 @@ public class Message {
 
     public void AddString(String string) {
         AddBytes(string.getBytes(ENCODING_CHARSET), true);
+    }
+
+    public byte ReadByte(int amount) {
+        if (amount > Converter.BITS_PER_BYTE || amount <= 0) {
+            throw new IllegalArgumentException("Wrong value for amount");
+        }
+
+        if (readBit + amount > writtenBit) {
+            throw new RuntimeException("Will overflow message length");
+        }
+
+        byte result = 0;
+
+        for (int i = 0; i < amount; i++) {
+            int absoluteBit = readBit + i;
+
+            int pos = absoluteBit / Converter.BITS_PER_BYTE;
+            int bit = absoluteBit % Converter.BITS_PER_BYTE;
+
+            int bitValue = (data[pos] >> bit) & 1;
+            result |= (byte) (bitValue << i);
+        }
+
+        readBit += amount;
+        return result;
     }
 
     /**

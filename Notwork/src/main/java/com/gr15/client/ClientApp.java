@@ -80,6 +80,9 @@ public class ClientApp {
 
     public void onMessageReceived(Message message) {
         LOGGER.info("New message received : \nlength=" + message.getData().length + "\ndata=" + message.getDataAsBitsInString());
+
+        byte messageId = message.ReadByte(Message.MESSAGE_ID_BITS);
+        LOGGER.info("MessageId="+messageId + " int="+ message.ReadByte(5));
     }
 
     @Override
