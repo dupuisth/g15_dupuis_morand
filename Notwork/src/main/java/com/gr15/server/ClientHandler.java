@@ -1,6 +1,7 @@
 package com.gr15.server;
 
 import com.gr15.common.Message;
+import com.gr15.common.message.STC_MessageHello;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -8,8 +9,8 @@ import java.util.logging.Logger;
 public class ClientHandler extends Thread {
     private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
 
-    private ConnectionToClient connectionToClient;
-    private ServerApp server;
+    private final ConnectionToClient connectionToClient;
+    private final ServerApp server;
 
     public ClientHandler(ConnectionToClient connectionToClient, ServerApp server) {
         this.connectionToClient = connectionToClient;
@@ -20,8 +21,14 @@ public class ClientHandler extends Thread {
     public void run() {
         super.run();
 
-        // Listen to the client
-        int i = 0;
+        // Send a welcome to the client
+        Message welcomeMessage = STC_MessageHello.CreateMessage(connectionToClient.getClientId(), "Coucou !");
+        try {
+            connectionToClient.send(welcomeMessage);
+        } catch (IOException e) {
+            LOGGER.warning("Failed to send welcome message e="+e.getMessage());
+        }
+
         while (connectionToClient.isConnected()) {
             // Read
             try {

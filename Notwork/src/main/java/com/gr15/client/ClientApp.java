@@ -5,6 +5,7 @@ import com.gr15.common.*;
 import com.gr15.common.message.CTS_Message;
 import com.gr15.common.message.MessageSTC;
 import com.gr15.common.message.STC_Message;
+import com.gr15.common.message.STC_MessageHello;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -98,6 +99,8 @@ public class ClientApp {
         // Handle each cases
         switch (messageType) {
             case HELLO -> {
+                STC_MessageHello parsedMessage = STC_MessageHello.ReadMessage(message);
+                handleMessage(parsedMessage);
             }
             case MESSAGE -> {
                 STC_Message parsedMessage = STC_Message.ReadMessage(message);
@@ -110,6 +113,10 @@ public class ClientApp {
     }
 
     public void handleMessage(STC_Message message) {
+        LOGGER.info(message.toString());
+    }
+
+    public void handleMessage(STC_MessageHello message) {
         LOGGER.info(message.toString());
     }
 

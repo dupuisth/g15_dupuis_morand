@@ -10,7 +10,6 @@ import com.gr15.common.message.STC_Message;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.logging.Logger;
 
 public class ServerApp {
