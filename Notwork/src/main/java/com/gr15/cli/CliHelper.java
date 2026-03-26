@@ -70,7 +70,10 @@ public class CliHelper {
         Scanner scanner = new Scanner(System.in);
 
         String fullPrompt;
-        if (minSize > 0 && maxSize > 0) {
+        if (prompt == null || prompt.isBlank())
+        {
+            fullPrompt = null;
+        } else if (minSize > 0 && maxSize > 0) {
             fullPrompt = prompt + " (" + minSize + ">= input >=" + maxSize + "): ";
         } else if (minSize > 0) {
             fullPrompt = prompt + " (" + minSize + " >= input): ";
@@ -81,7 +84,9 @@ public class CliHelper {
         }
 
         do {
-            System.out.print(fullPrompt);
+            if (fullPrompt != null) {
+                System.out.print(fullPrompt);
+            }
             inputString = scanner.nextLine();
         } while (inputString == null || (minSize > 0 && inputString.length() < minSize) || (maxSize > 0 && inputString.length() > maxSize));
 
@@ -118,5 +123,9 @@ public class CliHelper {
         } while (input == null || (min != null && input < min) || (max != null && input > max));
 
         return input;
+    }
+
+    public static void show(String text) {
+        System.out.println(text);
     }
 }

@@ -1,13 +1,11 @@
 package com.gr15.client;
 
 import com.gr15.common.Message;
+import com.gr15.utils.Logger;
 
 import java.io.EOFException;
-import java.util.logging.Logger;
 
 public class ListeningThread extends Thread {
-    private static final Logger LOGGER = Logger.getLogger(ListeningThread.class.getName());
-
     private final ClientApp client;
 
     public ListeningThread(ClientApp client) {
@@ -24,10 +22,10 @@ public class ListeningThread extends Thread {
                     Message message = Message.readMessageFromSocket(client.getConnection().getIn());
                     client.onMessageReceived(message);
                 } catch (EOFException e) {
-                    LOGGER.warning("Received a EOF when try to read, closing the connection");
+                    Logger.error("Received a EOF when try to read, closing the connection", e);
                     client.getConnection().close();
                 } catch (Exception e) {
-                    LOGGER.warning("Error while trying to read message ! e=" + e.getMessage());
+                    Logger.error("Error while trying to read message ! e=" + e.getMessage(), e);
                 }
             }
         }

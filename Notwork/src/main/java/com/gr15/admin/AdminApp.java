@@ -1,17 +1,14 @@
 package com.gr15.admin;
 
 import com.gr15.cli.CliHelper;
-import com.gr15.client.ClientApp;
+import com.gr15.utils.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class AdminApp {
     public static final String SERVER_KEY = "server=";
     public static final String CLIENT_KEY = "client=";
-
-    private static final Logger LOGGER = Logger.getLogger(AdminApp.class.getName());
 
     private final ClientManager clientManager;
     private final ServerManager serverManager;
@@ -104,7 +101,7 @@ public class AdminApp {
                     clientManager.addClient(serverHostname, serverPort);
                 }
             } catch (Exception e) {
-                LOGGER.warning("Exception while parsing argument e=" + e.getMessage());
+                Logger.error("Exception while parsing argument e=" + e.getMessage(), e);
             }
 
         }

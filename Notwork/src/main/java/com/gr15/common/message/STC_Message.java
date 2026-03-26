@@ -32,7 +32,9 @@ public class STC_Message {
         return content;
     }
 
-
+    public int getFromClientId() {
+        return fromClientId;
+    }
 
     @Override
     public String toString() {

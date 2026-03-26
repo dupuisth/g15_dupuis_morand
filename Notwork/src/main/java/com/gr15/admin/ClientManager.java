@@ -2,17 +2,14 @@ package com.gr15.admin;
 
 import com.gr15.Application;
 import com.gr15.client.ClientApp;
+import com.gr15.utils.Logger;
 import com.gr15.utils.ProcessUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class ClientManager {
-    private static final Logger LOGGER = Logger.getLogger(ClientManager.class.getName());
-
-
     private final List<Process> clients;
 
     public ClientManager() {
@@ -34,9 +31,9 @@ public class ClientManager {
         try {
             Process process = ProcessUtils.startApplicationInNewTerminal(arguments);
             clients.add(process);
-            LOGGER.info("Created a new process");
+            Logger.info("Created a new process");
         } catch (IOException e) {
-            LOGGER.warning("Failed to create the client process");
+            Logger.warn("Failed to create the client process");
         }
     }
 

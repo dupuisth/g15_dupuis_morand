@@ -2,22 +2,21 @@ package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
-import com.gr15.common.message.CTS_Message;
 import com.gr15.common.Message;
+import com.gr15.common.message.CTS_Message;
 import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
 import com.gr15.common.message.STC_MessageRemoveClient;
+import com.gr15.utils.Logger;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.logging.Logger;
+
 
 public class ServerApp {
     public static final String SERVER_ID_KEY = "serverId=";
     public static final String SERVER_PORT_KEY = "port=";
-
-    private static final Logger LOGGER = Logger.getLogger(ServerApp.class.getName());
 
     private boolean isStopping = false;
     private int port;
@@ -61,10 +60,10 @@ public class ServerApp {
     }
 
     public void run() {
-        LOGGER.info("Started new ServerApp");
+        Logger.info("Started new ServerApp");
 
         if (serverSocket != null) {
-            LOGGER.warning("Server already started");
+            Logger.warn("Server already started");
             return;
         }
 
@@ -72,7 +71,7 @@ public class ServerApp {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            LOGGER.warning("Failed to create a socket for " + toString());
+            Logger.error("Failed to create the server socket e=" + e.getMessage() , e);
             return;
         }
 
@@ -82,12 +81,12 @@ public class ServerApp {
                 // Block until a client open a connection
                 socket = serverSocket.accept();
             } catch (IOException e) {
-                LOGGER.warning("Failed to accept socket: " + e.getMessage());
+                Logger.error("Failed to accept socket: " + e.getMessage(), e);
                 // Block again
                 continue;
             }
 
-            LOGGER.info("New client inet=" + socket.getInetAddress() + " port=" + socket.getPort());
+            Logger.info("New client inet=" + socket.getInetAddress() + " port=" + socket.getPort());
 
             // Create a new connection
             ConnectionToClient connectionToClient = null;
@@ -96,7 +95,7 @@ public class ServerApp {
             try {
                 nextClientId = getNextClientId();
             } catch (RuntimeException e) {
-                LOGGER.warning("Failed to create the client id, e=" + e.getMessage());
+                Logger.error("Failed to create the client id, e=" + e.getMessage(), e);
 
                 // Close
                 try {
@@ -112,12 +111,12 @@ public class ServerApp {
             try {
                 connectionToClient = new ConnectionToClient(socket,  nextClientId);
             } catch (IOException e) {
-                LOGGER.warning("Failed to bind new client, disconnecting him");
+                Logger.error("Failed to bind new client, disconnecting it", e);
 
                 try {
                     socket.close();
                 } catch (IOException ex) {
-                    LOGGER.warning("Failed to close the connection");
+                    Logger.error("Failed to close the connection", ex);
                 }
             }
 
@@ -133,7 +132,7 @@ public class ServerApp {
             ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
             clientHandler.start();
 
-            LOGGER.info("Created new client, id="+nextClientId + " localId=" + ClientId.GetLocalId(nextClientId));
+            Logger.info("Created new client, id="+nextClientId + " localId=" + ClientId.GetLocalId(nextClientId));
         }
 
         // Destroy the objects
@@ -141,7 +140,7 @@ public class ServerApp {
             try {
                 serverSocket.close();
             } catch (IOException e) {
-                LOGGER.warning("Error while closing socket: " + e.getMessage());
+                Logger.error("Error while closing socket: " + e.getMessage(), e);
             }
         }
     }
@@ -168,7 +167,7 @@ public class ServerApp {
             Message notifyMessage = STC_MessageRemoveClient.CreateMessage(client.getClientId());
             sendToClients(notifyMessage); // No need to except, since the client is already removed
         } catch (Exception e) {
-            LOGGER.warning("Exception while handling client disconnection e=" + e.getMessage());
+            Logger.error("Exception while handling client disconnection e=" + e.getMessage(), e);
         }
     }
 
@@ -176,7 +175,7 @@ public class ServerApp {
      * When a message is received
      */
     public void onMessageReceived(ConnectionToClient client, Message message) {
-        LOGGER.info("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
+        Logger.debug("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
 
         // Read the message header
         int messageId = message.readInt(Message.MESSAGE_ID_BITS);
@@ -189,20 +188,20 @@ public class ServerApp {
                 handleMessage(client, parsedMessage);
             }
             case null -> {
-                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+                Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
         }
     }
 
     public void handleMessage(ConnectionToClient client, CTS_Message message) {
-        LOGGER.info(message.toString());
+        Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 
         // Send to all clients except sender
         Message echoMessage = STC_Message.CreateMessage(client.getClientId(), message.getContent());
         try {
             sendToClients(echoMessage, client);
         } catch (IOException e) {
-            LOGGER.warning("Failed to send ! e="+e.getMessage());
+            Logger.warn("Failed to send ! e="+e.getMessage());
         }
     }
 

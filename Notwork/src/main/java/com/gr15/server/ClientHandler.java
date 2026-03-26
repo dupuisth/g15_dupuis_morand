@@ -3,14 +3,12 @@ package com.gr15.server;
 import com.gr15.common.Message;
 import com.gr15.common.message.STC_MessageHello;
 import com.gr15.common.message.STC_MessageNewClient;
+import com.gr15.utils.Logger;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.logging.Logger;
 
 public class ClientHandler extends Thread {
-    private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
-
     private final ConnectionToClient connectionToClient;
     private final ServerApp server;
 
@@ -28,7 +26,7 @@ public class ClientHandler extends Thread {
         try {
             connectionToClient.send(welcomeMessage);
         } catch (IOException e) {
-            LOGGER.warning("Failed to send welcome message e="+e.getMessage());
+            Logger.warn("Failed to send welcome message e="+e.getMessage());
         }
 
         // Send the "NEW_CLIENT" to everyone else
@@ -36,7 +34,7 @@ public class ClientHandler extends Thread {
         try {
             server.sendToClients(newClientMessage, connectionToClient);
         } catch (IOException e) {
-            LOGGER.warning("Failed to send new client message e="+e.getMessage());
+            Logger.warn("Failed to send new client message e="+e.getMessage());
         }
 
         while (connectionToClient.isConnected()) {
@@ -46,11 +44,11 @@ public class ClientHandler extends Thread {
                 server.onMessageReceived(connectionToClient, readMessage);
             } catch (EOFException e) {
                 // EOF is thrown when the socket is closed
-                LOGGER.warning("Received a EOF when try to read from c=" + connectionToClient.getClientId() + ", closing the connection");
+                Logger.warn("Received a EOF when try to read from c=" + connectionToClient.getClientId() + ", closing the connection");
                 connectionToClient.close();
                 server.onClientDisconnected(connectionToClient);
             }   catch (Exception e) {
-                LOGGER.warning("Failed to read message e=" + e.getMessage());
+                Logger.warn("Failed to read message e=" + e.getMessage());
             }
         }
     }

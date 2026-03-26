@@ -1,18 +1,17 @@
 package com.gr15.common;
 
 import com.gr15.utils.BitmaskUtils;
+import com.gr15.utils.Logger;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.logging.Logger;
 
 // Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
 
 public class Message {
-    private static final Logger LOGGER = Logger.getLogger(Message.class.getName());
 
     // Length
     public static final int MESSAGE_ID_BITS = 4;
@@ -20,7 +19,8 @@ public class Message {
     // Config
     public static final Charset ENCODING_CHARSET = StandardCharsets.UTF_8;
 
-    public static final int MAX_SIZE_BYTES = 64;
+    // Arbitrary value, seems ok after some testing (currently saw a limit at ~ 4100, to investigate)
+    public static final int MAX_SIZE_BYTES = 3000;
     private byte[] data = new byte[MAX_SIZE_BYTES];
 
     /**
@@ -235,7 +235,7 @@ public class Message {
         in.readFully(messageBytes);
 
         Message message = new Message(messageBytes);
-        LOGGER.info("Received a message: \nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
+        Logger.debug("Received a message length=" + length);
 
         // Build the message from the bytes
         return message;
@@ -256,6 +256,6 @@ public class Message {
         // And assure the message is fully sent
         out.flush();
 
-        LOGGER.info("Sent a message: \nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
+        Logger.debug("Sent a message length=" + length);
     }
 }

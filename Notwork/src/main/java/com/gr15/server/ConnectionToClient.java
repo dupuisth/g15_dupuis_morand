@@ -1,15 +1,14 @@
 package com.gr15.server;
 
-import com.gr15.common.ClientId;
 import com.gr15.common.Message;
+import com.gr15.utils.Logger;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.util.logging.Logger;
 
 public class ConnectionToClient {
-    private static final Logger LOGGER = Logger.getLogger(ConnectionToClient.class.getName());
-
     private int clientId;
     private Socket socket;
     private DataOutputStream out;
@@ -22,7 +21,7 @@ public class ConnectionToClient {
             this.out = new DataOutputStream(socket.getOutputStream());
             this.in = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
-            LOGGER.warning("Failed to bind socket output/input");
+            Logger.warn("Failed to bind socket output/input");
             throw e;
         }
     }
@@ -35,7 +34,7 @@ public class ConnectionToClient {
         try {
             socket.close();
         } catch (IOException e) {
-            LOGGER.warning("Exception while closing socket c=" + clientId + ", e=" + e.getMessage());
+            Logger.warn("Exception while closing socket c=" + clientId + ", e=" + e.getMessage());
         }
     }
 

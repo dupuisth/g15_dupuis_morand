@@ -8,16 +8,12 @@ import com.gr15.server.ServerApp;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class Application {
-    private static final Logger LOGGER = Logger.getLogger(Application.class.getName());
-
-
     public static final String ADMIN_KEY = "admin";
     public static final String SERVER_KEY = "server";
     public static final String CLIENT_KEY = "client";
-    public static final String LOGGER_KEY = "logger";
+    public static final String Logger_KEY = "Logger";
 
     static ApplicationType selectApplicationType() {
         List<String> choices = new ArrayList<>();
@@ -40,8 +36,6 @@ public class Application {
         ApplicationType applicationType = null;
 
         for (String arg : args) {
-            LOGGER.info(arg);
-
             if (arg.compareToIgnoreCase(ADMIN_KEY) == 0) {
                 applicationType = ApplicationType.Admin;
             } else if (arg.compareToIgnoreCase(SERVER_KEY) == 0) {

@@ -1,17 +1,16 @@
 package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
-import com.gr15.common.*;
+import com.gr15.common.ClientId;
+import com.gr15.common.Message;
 import com.gr15.common.message.*;
+import com.gr15.utils.Logger;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
 public class ClientApp {
     public static final String HOSTNAME_KEY = "hostname=";
     public static final String PORT_KEY = "port=";
-
-    private static final Logger LOGGER = Logger.getLogger(ClientApp.class.getName());
 
     private String serverHostname;
     private int serverPort;
@@ -58,7 +57,7 @@ public class ClientApp {
     }
 
     public void run() {
-        LOGGER.info("Started new ClientApp");
+        Logger.info("Started new ClientApp");
 
         while (!connection.isConnected()) {
             connection.start();
@@ -78,18 +77,18 @@ public class ClientApp {
         while (connection.isConnected()) {
             // Take the client input
 
-            String input = CliHelper.inputString("What do you want to say ?", 0, 0);
+            String input = CliHelper.inputString(null, 0, 0);
             Message message = CTS_Message.CreateMessage(input);
             try {
                 Message.sendMessageToSocket(connection.getOut(), message);
             } catch (IOException e) {
-                LOGGER.warning("Failed to send message to server e=" + e.getMessage());
+                Logger.warn("Failed to send message to server e=" + e.getMessage());
             }
         }
     }
 
     public void onMessageReceived(Message message) {
-        LOGGER.fine("New message received : length=" + message.getData().length + " data=" + message.getDataAsBitsInString());
+        Logger.debug("New message received : length=" + message.getData().length + " data=" + message.getDataAsBitsInString());
 
         // Read the message header
         int messageId = message.readInt(Message.MESSAGE_ID_BITS);
@@ -98,7 +97,7 @@ public class ClientApp {
         // Handle each cases
         switch (messageType) {
             case null -> {
-                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+                Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
             case HELLO -> {
                 STC_MessageHello parsedMessage = STC_MessageHello.ReadMessage(message);
@@ -120,20 +119,28 @@ public class ClientApp {
     }
 
     public void handleMessage(STC_Message message) {
-        LOGGER.info(message.toString());
+        Logger.debug(message.toString());
+
+        CliHelper.show("[Client][" + ClientId.toString(message.getFromClientId()) + "]: " + message.getContent());
     }
 
     public void handleMessage(STC_MessageHello message) {
-        LOGGER.info(message.toString());
+        Logger.debug(message.toString());
         this.clientId = message.getClientId();
+
+        CliHelper.show("[Server][Welcome]: \"" + message.getWelcomeMessage() + "\", clientId=" + ClientId.toString(message.getClientId()));
     }
 
     public void handleMessage(STC_MessageNewClient message) {
-        LOGGER.info(message.toString());
+        Logger.debug(message.toString());
+
+        CliHelper.show("[Server][NewClient]: clientId=" + message.getClientId());
     }
 
     public void handleMessage(STC_MessageRemoveClient message) {
-        LOGGER.info(message.toString());
+        Logger.debug(message.toString());
+
+        CliHelper.show("[Server][RemoveClient]: clientId=" + message.getClientId());
     }
 
 
