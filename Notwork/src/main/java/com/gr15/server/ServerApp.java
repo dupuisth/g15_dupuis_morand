@@ -61,11 +61,6 @@ public class ServerApp {
     public void run() {
         LOGGER.info("Started new ServerApp");
 
-        // Send the Hello Message to the client
-        Message message = new Message(Message.STC_HELLO);
-        message.addString("Salut !");
-        LOGGER.info(message.getDataAsBitsInString());
-
         if (serverSocket != null) {
             LOGGER.warning("Server already started");
             return;
