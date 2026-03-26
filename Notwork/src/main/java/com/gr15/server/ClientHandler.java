@@ -2,6 +2,7 @@ package com.gr15.server;
 
 import com.gr15.common.Message;
 import com.gr15.common.message.STC_MessageHello;
+import com.gr15.common.message.STC_MessageNewClient;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -27,6 +28,14 @@ public class ClientHandler extends Thread {
             connectionToClient.send(welcomeMessage);
         } catch (IOException e) {
             LOGGER.warning("Failed to send welcome message e="+e.getMessage());
+        }
+
+        // Send the "NEW_CLIENT" to everyone else
+        Message newClientMessage = STC_MessageNewClient.CreateMessage(connectionToClient.getClientId());
+        try {
+            server.sendToClients(newClientMessage, connectionToClient);
+        } catch (IOException e) {
+            LOGGER.warning("Failed to send new client message e="+e.getMessage());
         }
 
         while (connectionToClient.isConnected()) {

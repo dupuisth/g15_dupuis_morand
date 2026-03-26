@@ -2,10 +2,7 @@ package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.common.*;
-import com.gr15.common.message.CTS_Message;
-import com.gr15.common.message.MessageSTC;
-import com.gr15.common.message.STC_Message;
-import com.gr15.common.message.STC_MessageHello;
+import com.gr15.common.message.*;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -100,6 +97,9 @@ public class ClientApp {
 
         // Handle each cases
         switch (messageType) {
+            case null -> {
+                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+            }
             case HELLO -> {
                 STC_MessageHello parsedMessage = STC_MessageHello.ReadMessage(message);
                 handleMessage(parsedMessage);
@@ -108,8 +108,9 @@ public class ClientApp {
                 STC_Message parsedMessage = STC_Message.ReadMessage(message);
                 handleMessage(parsedMessage);
             }
-            case null -> {
-                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+            case NEW_CLIENT -> {
+                STC_MessageNewClient parsedMessage = STC_MessageNewClient.ReadMessage(message);
+                handleMessage(parsedMessage);
             }
         }
     }
@@ -121,6 +122,10 @@ public class ClientApp {
     public void handleMessage(STC_MessageHello message) {
         LOGGER.info(message.toString());
         this.clientId = message.getClientId();
+    }
+
+    public void handleMessage(STC_MessageNewClient message) {
+        LOGGER.info(message.toString());
     }
 
     @Override

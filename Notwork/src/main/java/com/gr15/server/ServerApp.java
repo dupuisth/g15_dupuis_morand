@@ -175,7 +175,7 @@ public class ServerApp {
         LOGGER.info(message.toString());
 
         // Send to all clients except sender
-        Message echoMessage = STC_Message.CreateMessage(message.getContent());
+        Message echoMessage = STC_Message.CreateMessage(client.getClientId(), message.getContent());
         try {
             sendToClients(echoMessage, client);
         } catch (IOException e) {

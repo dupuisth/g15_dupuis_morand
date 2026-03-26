@@ -16,14 +16,14 @@ public class Connection {
     private DataInputStream in;
 
     public Connection(String serverHostname, int port) {
-        this.socket = new Socket();
         this.socketAddress = new InetSocketAddress(serverHostname, port);
     }
 
     public boolean start() {
         try {
             LOGGER.info("Trying to connect to inet=" + socketAddress);
-            socket.connect(socketAddress);
+            this.socket = new Socket();
+            this.socket.connect(socketAddress);
             this.out = new DataOutputStream(socket.getOutputStream());
             this.in = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
