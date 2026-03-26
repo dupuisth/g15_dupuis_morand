@@ -20,21 +20,19 @@ public class ClientManager {
     }
 
     public void addClient(String hostname, int port) {
-        StringBuilder argumentBuilder = new StringBuilder(Application.CLIENT_KEY);
+        ArrayList<String> arguments = new ArrayList<>();
+        arguments.add(Application.CLIENT_KEY);
+
         if (hostname != null) {
-            argumentBuilder.append(" ");
-            argumentBuilder.append(ClientApp.HOSTNAME_KEY);
-            argumentBuilder.append(hostname);
+            arguments.add(ClientApp.HOSTNAME_KEY + hostname);
         }
 
         if (port >= 0) {
-            argumentBuilder.append(" ");
-            argumentBuilder.append(ClientApp.PORT_KEY);
-            argumentBuilder.append(port);
+            arguments.add(ClientApp.PORT_KEY + port);
         }
 
         try {
-            Process process = ProcessUtils.startApplicationInNewTerminal(argumentBuilder.toString());
+            Process process = ProcessUtils.startApplicationInNewTerminal(arguments);
             clients.add(process);
             LOGGER.info("Created a new process");
         } catch (IOException e) {

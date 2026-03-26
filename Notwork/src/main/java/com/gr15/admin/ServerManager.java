@@ -19,22 +19,19 @@ public class ServerManager {
     }
 
     public void addServer(int serverId, int serverPort) {
-        StringBuilder argumentBuilder = new StringBuilder(Application.SERVER_KEY);
+        java.util.ArrayList<String> arguments = new ArrayList<>();
+        arguments.add(Application.SERVER_KEY);
 
         if (serverId > 0) {
-            argumentBuilder.append(" ");
-            argumentBuilder.append(ServerApp.SERVER_ID_KEY);
-            argumentBuilder.append(serverId);
+            arguments.add(ServerApp.SERVER_ID_KEY + serverId);
         }
 
         if (serverPort > 0) {
-            argumentBuilder.append(" ");
-            argumentBuilder.append(ServerApp.SERVER_PORT_KEY);
-            argumentBuilder.append(serverPort);
+            arguments.add(ServerApp.SERVER_PORT_KEY + serverPort);
         }
 
         try {
-            Process process = ProcessUtils.startApplicationInNewTerminal(argumentBuilder.toString());
+            Process process = ProcessUtils.startApplicationInNewTerminal(arguments);
             servers.add(process);
             LOGGER.info("Created a new process");
         } catch (IOException e) {
