@@ -229,9 +229,12 @@ public class ServerApp {
     }
 
     public int getNextClientId() throws RuntimeException{
-        for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
-            if (connectionsToClient[i] == null) {
-                return ClientId.Create(serverId, i);
+        synchronized (connectionsToClient)
+        {
+            for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
+                if (connectionsToClient[i] == null) {
+                    return ClientId.Create(serverId, i);
+                }
             }
         }
 

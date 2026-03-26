@@ -1,5 +1,7 @@
 package com.gr15.common;
 
+import com.gr15.utils.BitmaskUtils;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -61,7 +63,7 @@ public class Message {
         }
 
         // Discard any bits that are beyond the given amount
-        byte mask = (byte) (0xFF >> (Converter.BITS_PER_BYTE - amount));
+        byte mask = (byte)BitmaskUtils.GetBitmask(amount);
         bitfield &= mask;
         Converter.ByteToBits(bitfield, data, writtenBit);
         writtenBit += amount;
@@ -80,7 +82,7 @@ public class Message {
             throw new RuntimeException("Message will be too big !");
         }
 
-        int mask = (0xFFFFFFFF >> (Converter.BITS_PER_INTEGER - amount));
+        int mask = BitmaskUtils.GetBitmask(amount);
         bitfield &= mask;
         Converter.IntToBits(bitfield, data, writtenBit);
         writtenBit += amount;
