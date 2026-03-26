@@ -149,8 +149,11 @@ public class ServerApp {
         isStopping = true;
     }
 
+    /**
+     * When a message is received
+     */
     public void onMessageReceived(ConnectionToClient client, Message message) {
-        LOGGER.info("Received a message (CTS) ! from=" + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
+        LOGGER.info("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
 
         // Read the message header
         int messageId = message.readInt(Message.MESSAGE_ID_BITS);

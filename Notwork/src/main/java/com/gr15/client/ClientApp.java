@@ -20,6 +20,8 @@ public class ClientApp {
     private int serverPort;
     private Connection connection;
 
+    private int clientId;
+
     public ClientApp(String[] args) {
         serverHostname = null;
         serverPort = -1;
@@ -118,6 +120,7 @@ public class ClientApp {
 
     public void handleMessage(STC_MessageHello message) {
         LOGGER.info(message.toString());
+        this.clientId = message.getClientId();
     }
 
     @Override

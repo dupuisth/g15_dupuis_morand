@@ -27,4 +27,8 @@ public class ClientId {
     public static int GetLocalId(int clientId) {
         return clientId & (TOTAL_BITS_BITMASK >> TOTAL_BITS - LOCAL_ID_BITS);
     }
+
+    public static String toString(int clientId) {
+        return clientId + "(" + GetServerId(clientId)  + ":" + GetLocalId(clientId) + ")";
+    }
 }
