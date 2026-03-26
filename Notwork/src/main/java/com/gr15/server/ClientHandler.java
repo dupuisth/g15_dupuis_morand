@@ -4,6 +4,7 @@ import com.gr15.common.Message;
 import com.gr15.common.message.STC_MessageHello;
 import com.gr15.common.message.STC_MessageNewClient;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.logging.Logger;
 
@@ -43,7 +44,12 @@ public class ClientHandler extends Thread {
             try {
                 Message readMessage = Message.readMessageFromSocket(connectionToClient.getIn());
                 server.onMessageReceived(connectionToClient, readMessage);
-            } catch (IOException e) {
+            } catch (EOFException e) {
+                // EOF is thrown when the socket is closed
+                LOGGER.warning("Received a EOF when try to read from c=" + connectionToClient.getClientId() + ", closing the connection");
+                connectionToClient.close();
+                server.onClientDisconnected(connectionToClient);
+            }   catch (Exception e) {
                 LOGGER.warning("Failed to read message e=" + e.getMessage());
             }
         }

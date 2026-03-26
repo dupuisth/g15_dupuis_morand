@@ -6,6 +6,7 @@ import com.gr15.common.message.CTS_Message;
 import com.gr15.common.Message;
 import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
+import com.gr15.common.message.STC_MessageRemoveClient;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -147,6 +148,28 @@ public class ServerApp {
 
     public void stop() {
         isStopping = true;
+    }
+
+    public void onClientDisconnected(ConnectionToClient client) {
+        // Remove the client from the list, and notify clients
+
+        try {
+            int localId = ClientId.GetLocalId(client.getClientId());
+            if (localId < 0 || localId >= ClientId.MAX_CLIENTS) {
+                // The id is not valid, something is wrong
+                throw new RuntimeException("The given clientId is not valid, something is wrong clientId=" + ClientId.toString(client.getClientId()));
+            }
+
+            // Remove it
+            synchronized (connectionsToClient) {
+                connectionsToClient[localId] = null;
+            }
+            // Notify clients
+            Message notifyMessage = STC_MessageRemoveClient.CreateMessage(client.getClientId());
+            sendToClients(notifyMessage); // No need to except, since the client is already removed
+        } catch (Exception e) {
+            LOGGER.warning("Exception while handling client disconnection e=" + e.getMessage());
+        }
     }
 
     /**

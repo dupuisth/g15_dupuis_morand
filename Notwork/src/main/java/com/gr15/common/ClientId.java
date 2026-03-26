@@ -8,7 +8,7 @@ import com.gr15.utils.BitmaskUtils;
  */
 public class ClientId {
     public static final int SERVER_ID_BITS = 4;
-    public static final int LOCAL_ID_BITS = 4;
+    public static final int LOCAL_ID_BITS = 1;
     public static final int TOTAL_BITS = SERVER_ID_BITS + LOCAL_ID_BITS;
     public static final int TOTAL_BITS_BITMASK = BitmaskUtils.GetBitmask(TOTAL_BITS);
 

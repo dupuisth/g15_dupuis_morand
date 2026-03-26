@@ -6,7 +6,8 @@ package com.gr15.common.message;
 public enum MessageSTC {
     HELLO(0),
     MESSAGE(1),
-    NEW_CLIENT(2);
+    NEW_CLIENT(2),
+    REMOVE_CLIENT(3);
 
     private final int val;
 

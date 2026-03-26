@@ -224,7 +224,7 @@ public class Message {
     /**
      * Read a message on a given input stream
      */
-    public static Message readMessageFromSocket(DataInputStream in) throws IOException {
+    public static Message readMessageFromSocket(DataInputStream in) throws Exception {
         // Read the length
         int length = in.readInt();
 

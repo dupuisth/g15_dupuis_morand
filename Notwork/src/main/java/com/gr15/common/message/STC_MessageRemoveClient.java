@@ -3,12 +3,12 @@ package com.gr15.common.message;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 
-public class STC_MessageNewClient {
-    public static final int ID = MessageSTC.NEW_CLIENT.getId();
+public class STC_MessageRemoveClient {
+    public static final int ID = MessageSTC.REMOVE_CLIENT.getId();
 
     private final int clientId;
 
-    private STC_MessageNewClient(int clientId) {
+    private STC_MessageRemoveClient(int clientId) {
         this.clientId = clientId;
     }
 
@@ -18,9 +18,9 @@ public class STC_MessageNewClient {
         return message;
     }
 
-    public static STC_MessageNewClient ReadMessage(Message message) {
+    public static STC_MessageRemoveClient ReadMessage(Message message) {
         int clientId = message.readInt(ClientId.TOTAL_BITS);
-        return new STC_MessageNewClient(clientId);
+        return new STC_MessageRemoveClient(clientId);
     }
 
     public int getClientId() {
@@ -29,7 +29,7 @@ public class STC_MessageNewClient {
 
     @Override
     public String toString() {
-        return "STC_MessageNewClient{" +
+        return "STC_MessageRemoveClient{" +
                 "clientId=" + clientId +
                 '}';
     }

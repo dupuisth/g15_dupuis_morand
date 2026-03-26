@@ -32,6 +32,8 @@ public class STC_Message {
         return content;
     }
 
+
+
     @Override
     public String toString() {
         return "STC_Message{" +

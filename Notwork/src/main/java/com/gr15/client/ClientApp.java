@@ -16,6 +16,7 @@ public class ClientApp {
     private String serverHostname;
     private int serverPort;
     private Connection connection;
+    private ListeningThread listeningThread;
 
     private int clientId;
 
@@ -70,8 +71,7 @@ public class ClientApp {
         }
 
         // Open the listening thread
-        // TODO : Keep a pointer on this
-        ListeningThread listeningThread = new ListeningThread(this);
+        listeningThread = new ListeningThread(this);
         listeningThread.start();
 
         // Prompt for a message
@@ -112,6 +112,10 @@ public class ClientApp {
                 STC_MessageNewClient parsedMessage = STC_MessageNewClient.ReadMessage(message);
                 handleMessage(parsedMessage);
             }
+            case REMOVE_CLIENT -> {
+                STC_MessageRemoveClient parsedMessage = STC_MessageRemoveClient.ReadMessage(message);
+                handleMessage(parsedMessage);
+            }
         }
     }
 
@@ -127,6 +131,11 @@ public class ClientApp {
     public void handleMessage(STC_MessageNewClient message) {
         LOGGER.info(message.toString());
     }
+
+    public void handleMessage(STC_MessageRemoveClient message) {
+        LOGGER.info(message.toString());
+    }
+
 
     @Override
     public String toString() {

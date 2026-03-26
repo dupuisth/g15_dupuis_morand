@@ -31,6 +31,14 @@ public class ConnectionToClient {
         Message.sendMessageToSocket(out, message);
     }
 
+    public void close() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            LOGGER.warning("Exception while closing socket c=" + clientId + ", e=" + e.getMessage());
+        }
+    }
+
     public Socket getSocket() {
         return socket;
     }

@@ -35,6 +35,14 @@ public class Connection {
         return true;
     }
 
+    public void close() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            LOGGER.warning("Exception while closing, e=" + e.getMessage());
+        }
+    }
+
     public DataInputStream getIn() {
         return in;
     }
