@@ -1,4 +1,6 @@
-package com.gr15.common;
+package com.gr15.common.message;
+
+import com.gr15.common.Message;
 
 public class STC_Message {
     public static final int ID = MessageSTC.MESSAGE.getId();

@@ -1,4 +1,4 @@
-package com.gr15.common;
+package com.gr15.common.message;
 
 /**
  * Type of messages Client -> Server

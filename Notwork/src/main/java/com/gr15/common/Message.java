@@ -14,13 +14,13 @@ public class Message {
 
     // Length
     public static final int MESSAGE_ID_BITS = 4;
-    public static final int MESSAGE_HEADER_BITS = 16;
 
     // Config
     public static final Charset ENCODING_CHARSET = StandardCharsets.UTF_8;
 
     public static final int MAX_SIZE_BYTES = 64;
     private byte[] data = new byte[MAX_SIZE_BYTES];
+
     /**
      * How many bits have been written
      */

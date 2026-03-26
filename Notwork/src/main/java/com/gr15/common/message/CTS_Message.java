@@ -1,4 +1,6 @@
-package com.gr15.common;
+package com.gr15.common.message;
+
+import com.gr15.common.Message;
 
 public class CTS_Message {
     public static final int ID = MessageCTS.MESSAGE.getId();

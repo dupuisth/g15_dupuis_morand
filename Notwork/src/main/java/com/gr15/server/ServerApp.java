@@ -1,10 +1,11 @@
 package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
-import com.gr15.common.CTS_Message;
+import com.gr15.common.ClientId;
+import com.gr15.common.message.CTS_Message;
 import com.gr15.common.Message;
-import com.gr15.common.MessageCTS;
-import com.gr15.common.STC_Message;
+import com.gr15.common.message.MessageCTS;
+import com.gr15.common.message.STC_Message;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -23,7 +24,7 @@ public class ServerApp {
     private int serverId;
 
     private ServerSocket serverSocket;
-    private ArrayList<ConnectionToClient> connectionsToClient = new ArrayList<>();
+    private final ConnectionToClient[] connectionsToClient = new ConnectionToClient[ClientId.MAX_CLIENTS];
 
     public ServerApp(String[] args) {
         // Default to bad values
@@ -57,8 +58,6 @@ public class ServerApp {
     public ServerApp(int serverId, int port) {
         this.serverId = serverId;
         this.port = port;
-
-        connectionsToClient = new ArrayList<>();
     }
 
     public void run() {
@@ -88,13 +87,30 @@ public class ServerApp {
                 continue;
             }
 
-            LOGGER.info("New client! inet=" + socket.getInetAddress() + " port=" + socket.getPort());
+            LOGGER.info("New client inet=" + socket.getInetAddress() + " port=" + socket.getPort());
 
             // Create a new connection
             ConnectionToClient connectionToClient = null;
-            try {
-                connectionToClient = new ConnectionToClient(socket);
 
+            int nextClientId;
+            try {
+                nextClientId = getNextClientId();
+            } catch (RuntimeException e) {
+                LOGGER.warning("Failed to create the client id, e=" + e.getMessage());
+
+                // Close
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    // Ignore
+                }
+
+                // Ignore this socket, we can't accept him
+                continue;
+            }
+
+            try {
+                connectionToClient = new ConnectionToClient(socket,  nextClientId);
             } catch (IOException e) {
                 LOGGER.warning("Failed to bind new client, disconnecting him");
 
@@ -111,11 +127,13 @@ public class ServerApp {
             }
 
             // Add it to the clients list
-            connectionsToClient.add(connectionToClient);
+            connectionsToClient[ClientId.GetLocalId(nextClientId)] = connectionToClient;
 
             // Start the handler
             ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
             clientHandler.start();
+
+            LOGGER.info("Created new client, id="+nextClientId + " localId=" + ClientId.GetLocalId(nextClientId));
         }
 
         // Destroy the objects
@@ -170,6 +188,7 @@ public class ServerApp {
     public void sendToClients(Message message) throws IOException {
         synchronized (connectionsToClient) {
             for (ConnectionToClient client : connectionsToClient) {
+                if (client == null) continue;
                 client.send(message);
             }
         }
@@ -178,10 +197,20 @@ public class ServerApp {
     public void sendToClients(Message message, ConnectionToClient except) throws IOException {
         synchronized (connectionsToClient) {
             for (ConnectionToClient client : connectionsToClient) {
-                if (client == except) continue;
+                if (client == null || client == except) continue;
                 client.send(message);
             }
         }
+    }
+
+    public int getNextClientId() throws RuntimeException{
+        for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
+            if (connectionsToClient[i] == null) {
+                return ClientId.Create(serverId, i);
+            }
+        }
+
+        throw new RuntimeException("No more space in the network !");
     }
 
     public int getPort() {
@@ -192,7 +221,7 @@ public class ServerApp {
         return serverId;
     }
 
-    public ArrayList<ConnectionToClient> getConnectionsToClient() {
+    public ConnectionToClient[] getConnectionsToClient() {
         return connectionsToClient;
     }
 

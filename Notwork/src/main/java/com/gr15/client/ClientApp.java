@@ -2,6 +2,9 @@ package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.common.*;
+import com.gr15.common.message.CTS_Message;
+import com.gr15.common.message.MessageSTC;
+import com.gr15.common.message.STC_Message;
 
 import java.io.IOException;
 import java.util.logging.Logger;

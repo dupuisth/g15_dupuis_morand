@@ -1,5 +1,6 @@
 package com.gr15.server;
 
+import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 
 import java.io.*;
@@ -9,12 +10,14 @@ import java.util.logging.Logger;
 public class ConnectionToClient {
     private static final Logger LOGGER = Logger.getLogger(ConnectionToClient.class.getName());
 
+    private int clientId;
     private Socket socket;
     private DataOutputStream out;
     private DataInputStream in;
 
-    public ConnectionToClient(Socket socket) throws IOException {
+    public ConnectionToClient(Socket socket, int clientId) throws IOException {
         this.socket = socket;
+        this.clientId = clientId;
         try {
             this.out = new DataOutputStream(socket.getOutputStream());
             this.in = new DataInputStream(socket.getInputStream());
@@ -25,12 +28,7 @@ public class ConnectionToClient {
     }
 
     public void send(Message message) throws IOException {
-        int length = message.getWrittenByte();
-        out.writeInt(length);
-        out.write(message.getData(), 0, length);
-        out.flush();
-
-        LOGGER.info("Sent a message to client:\nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
+        Message.sendMessageToSocket(out, message);
     }
 
     public Socket getSocket() {
@@ -47,5 +45,9 @@ public class ConnectionToClient {
 
     public boolean isConnected() {
         return socket != null && socket.isConnected() && !socket.isClosed();
+    }
+
+    public int getClientId() {
+        return clientId;
     }
 }
