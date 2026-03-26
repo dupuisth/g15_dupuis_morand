@@ -1,7 +1,10 @@
 package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
+import com.gr15.common.CTS_Message;
 import com.gr15.common.Message;
+import com.gr15.common.MessageCTS;
+import com.gr15.common.STC_Message;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -130,13 +133,55 @@ public class ServerApp {
     }
 
     public void onMessageReceived(ConnectionToClient client, Message message) {
-        LOGGER.info("Received a message ! from=" + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
+        LOGGER.info("Received a message (CTS) ! from=" + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
 
+        // Read the message header
         int messageId = message.readInt(Message.MESSAGE_ID_BITS);
-        LOGGER.info("MessageId=" + messageId);
+        MessageCTS messageType = MessageCTS.fromId(messageId);
 
-        String test = message.readString();
-        LOGGER.info(test);
+        // Handle each cases
+        switch (messageType) {
+            case MESSAGE -> {
+                CTS_Message parsedMessage = CTS_Message.ReadMessage(message);
+                handleMessage(client, parsedMessage);
+            }
+            case null -> {
+                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+            }
+        }
+    }
+
+    public void handleMessage(ConnectionToClient client, CTS_Message message) {
+        LOGGER.info(message.toString());
+
+        // Send to all clients except sender
+        Message echoMessage = STC_Message.CreateMessage(message.getContent());
+        try {
+            sendToClients(echoMessage, client);
+        } catch (IOException e) {
+            LOGGER.warning("Failed to send ! e="+e.getMessage());
+        }
+    }
+
+    public void sendToClient(ConnectionToClient client, Message message) throws IOException {
+        client.send(message);
+    }
+
+    public void sendToClients(Message message) throws IOException {
+        synchronized (connectionsToClient) {
+            for (ConnectionToClient client : connectionsToClient) {
+                client.send(message);
+            }
+        }
+    }
+
+    public void sendToClients(Message message, ConnectionToClient except) throws IOException {
+        synchronized (connectionsToClient) {
+            for (ConnectionToClient client : connectionsToClient) {
+                if (client == except) continue;
+                client.send(message);
+            }
+        }
     }
 
     public int getPort() {

@@ -4,8 +4,6 @@ import com.gr15.common.Message;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.logging.Logger;
 
 public class ConnectionToClient {

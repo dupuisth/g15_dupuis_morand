@@ -20,16 +20,6 @@ public class ClientHandler extends Thread {
     public void run() {
         super.run();
 
-        // Send a welcome message !
-        Message message = new Message((byte)1);
-        message.addInt(0xA0, 8);
-
-        try {
-            connectionToClient.send(message);
-        } catch (IOException e) {
-            LOGGER.warning("Failed to send the message !");
-        }
-
         // Listen to the client
         int i = 0;
         while (connectionToClient.isConnected()) {

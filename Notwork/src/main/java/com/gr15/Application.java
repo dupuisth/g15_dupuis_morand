@@ -13,6 +13,7 @@ public class Application {
     public static final String ADMIN_KEY = "admin";
     public static final String SERVER_KEY = "server";
     public static final String CLIENT_KEY = "client";
+    public static final String LOGGER_KEY = "logger";
 
     static ApplicationType selectApplicationType() {
         List<String> choices = new ArrayList<>();

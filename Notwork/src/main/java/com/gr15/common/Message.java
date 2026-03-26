@@ -12,15 +12,6 @@ import java.util.logging.Logger;
 public class Message {
     private static final Logger LOGGER = Logger.getLogger(Message.class.getName());
 
-    // Server --> Client
-    public static final int STC_HELLO = 0;
-    public static final int STC_BROADCAST = 2;
-    public static final int STC_PING = 3;
-
-    // Client --> Server
-    public static final int CTS_PONG = 0;
-    public static final int CTS_MESSAGE = 1;
-
     // Length
     public static final int MESSAGE_ID_BITS = 4;
     public static final int MESSAGE_HEADER_BITS = 16;

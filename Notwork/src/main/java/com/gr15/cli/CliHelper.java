@@ -82,7 +82,7 @@ public class CliHelper {
 
         do {
             System.out.print(fullPrompt);
-            inputString = scanner.next();
+            inputString = scanner.nextLine();
         } while (inputString == null || (minSize > 0 && inputString.length() < minSize) || (maxSize > 0 && inputString.length() > maxSize));
 
         return inputString;

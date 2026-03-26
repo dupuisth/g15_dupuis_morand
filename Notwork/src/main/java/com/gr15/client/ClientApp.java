@@ -1,7 +1,7 @@
 package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
-import com.gr15.common.Message;
+import com.gr15.common.*;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -76,8 +76,7 @@ public class ClientApp {
             // Take the client input
 
             String input = CliHelper.inputString("What do you want to say ?", 0, 0);
-            Message message = new Message(Message.CTS_MESSAGE);
-            message.addString(input);
+            Message message = CTS_Message.CreateMessage(input);
             try {
                 Message.sendMessageToSocket(connection.getOut(), message);
             } catch (IOException e) {
@@ -87,10 +86,28 @@ public class ClientApp {
     }
 
     public void onMessageReceived(Message message) {
-        LOGGER.info("New message received : \nlength=" + message.getData().length + "\ndata=" + message.getDataAsBitsInString());
+        LOGGER.fine("New message received : length=" + message.getData().length + " data=" + message.getDataAsBitsInString());
 
-        byte messageId = message.readByte(Message.MESSAGE_ID_BITS);
-        LOGGER.info("MessageId="+messageId + " int="+ message.readByte(5));
+        // Read the message header
+        int messageId = message.readInt(Message.MESSAGE_ID_BITS);
+        MessageSTC messageType = MessageSTC.fromId(messageId);
+
+        // Handle each cases
+        switch (messageType) {
+            case HELLO -> {
+            }
+            case MESSAGE -> {
+                STC_Message parsedMessage = STC_Message.ReadMessage(message);
+                handleMessage(parsedMessage);
+            }
+            case null -> {
+                LOGGER.warning("Unknown message type, ignoring it (id=" + messageId + ")");
+            }
+        }
+    }
+
+    public void handleMessage(STC_Message message) {
+        LOGGER.info(message.toString());
     }
 
     @Override
