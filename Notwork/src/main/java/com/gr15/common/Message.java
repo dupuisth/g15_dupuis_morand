@@ -7,17 +7,19 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
+// Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
+
 public class Message {
     private static final Logger LOGGER = Logger.getLogger(Message.class.getName());
 
     // Server --> Client
-    public static final byte STC_HELLO = 0;
-    public static final byte STC_BROADCAST = 2;
-    public static final byte STC_PING = 3;
+    public static final int STC_HELLO = 0;
+    public static final int STC_BROADCAST = 2;
+    public static final int STC_PING = 3;
 
     // Client --> Server
-    public static final byte CTS_PONG = 0;
-    public static final byte CTS_MESSAGE = 1;
+    public static final int CTS_PONG = 0;
+    public static final int CTS_MESSAGE = 1;
 
     // Length
     public static final int MESSAGE_ID_BITS = 4;
@@ -38,16 +40,16 @@ public class Message {
      */
     private int readBit;
 
-    public Message(byte messageId) {
+    public Message(int messageId) {
         writtenBit = 0;
         readBit = 0;
 
-        AddBits(messageId, MESSAGE_ID_BITS);
+        addInt(messageId, MESSAGE_ID_BITS);
     }
 
     public Message(byte[] aBytes) {
         this.data = aBytes;
-        this.writtenBit = data.length * Converter.BITS_PER_BYTE; // Approximate
+        this.writtenBit = aBytes.length * Converter.BITS_PER_BYTE; // Approximate
         this.readBit = 0;
     }
 
@@ -57,11 +59,8 @@ public class Message {
 
     /**
      * Add up to 8 bits to the message
-     *
-     * @param bitfield
-     * @param amount
      */
-    public void AddBits(byte bitfield, int amount) {
+    public void addBits(byte bitfield, int amount) {
         if (amount > Converter.BITS_PER_BYTE || amount <= 0) {
             throw new IllegalArgumentException("Cannot add amount=" + amount + " bits from a byte type");
         }
@@ -81,7 +80,7 @@ public class Message {
     /**
      * Add up to 32 bits to the message
      */
-    public void AddInt(int bitfield, int amount) {
+    public void addInt(int bitfield, int amount) {
         if (amount > Converter.BITS_PER_INTEGER || amount <= 0) {
             throw new IllegalArgumentException("Cannot add amount=" + amount + " bit from an integer type");
         }
@@ -96,25 +95,33 @@ public class Message {
         writtenBit += amount;
     }
 
-    public void AddBytes(byte[] bytes, boolean writeLength) {
+    /**
+     * Add a byte array to the message
+     * @param writeLength if the length of the byte array should be written before
+     */
+    public void addBytes(byte[] bytes, boolean writeLength) {
         if (bytes.length * Converter.BITS_PER_BYTE > getUnwrittenBits()) {
             throw new RuntimeException("Message will be too big !");
         }
 
         if (writeLength) {
-            AddInt(bytes.length, Converter.BITS_PER_INTEGER);
+            addInt(bytes.length, Converter.BITS_PER_INTEGER);
         }
 
         for (byte aByte : bytes) {
-            AddBits(aByte, Converter.BITS_PER_BYTE);
+            addBits(aByte, Converter.BITS_PER_BYTE);
         }
     }
 
-    public void AddString(String string) {
-        AddBytes(string.getBytes(ENCODING_CHARSET), true);
+    public void addString(String string) {
+        addBytes(string.getBytes(ENCODING_CHARSET), true);
     }
 
-    public byte ReadByte(int amount) {
+    /**
+     * Read up to a byte from the message
+     * @param amount the amount of bits to read
+     */
+    public byte readByte(int amount) {
         if (amount > Converter.BITS_PER_BYTE || amount <= 0) {
             throw new IllegalArgumentException("Wrong value for amount");
         }
@@ -137,6 +144,56 @@ public class Message {
 
         readBit += amount;
         return result;
+    }
+
+    /**
+     * Read up to an int from the message
+     * @param amount the amount of bits to read
+     */
+    public int readInt(int amount) {
+        if (amount > Converter.BITS_PER_INTEGER || amount <= 0) {
+            throw new IllegalArgumentException("Wrong value for amount");
+        }
+
+        if (readBit + amount > writtenBit) {
+            throw new RuntimeException("Will overflow message length");
+        }
+
+        int result = 0;
+        for (int i = 0; i < amount; i++) {
+            int absoluteBit = readBit + i;
+
+            int pos = absoluteBit / Converter.BITS_PER_BYTE;
+            int bit = absoluteBit % Converter.BITS_PER_BYTE;
+
+            int bitValue = (data[pos] >> bit) & 1;
+            result |= bitValue << i;
+        }
+        readBit += amount;
+
+        return result;
+    }
+
+    /**
+     * Read the length of the byte array, then the byte array from the message
+     */
+    public byte[] readBytesWithLength() {
+        int length = readInt(Converter.BITS_PER_INTEGER);
+
+        byte[] bytes = new byte[length];
+        for (int i = 0; i < length; i++) {
+            bytes[i] = readByte(Converter.BITS_PER_BYTE);
+        }
+        return bytes;
+    }
+
+    /**
+     * Read a string from the message
+     */
+    public String readString() {
+        byte[] stringBytes = readBytesWithLength();
+        String decoded = new String(stringBytes, ENCODING_CHARSET);
+        return decoded;
     }
 
     /**
@@ -173,6 +230,9 @@ public class Message {
         return Math.ceilDiv(writtenBit, Converter.BITS_PER_BYTE);
     }
 
+    /**
+     * Read a message on a given input stream
+     */
     public static Message readMessageFromSocket(DataInputStream in) throws IOException {
         // Read the length
         int length = in.readInt();
@@ -181,21 +241,28 @@ public class Message {
         byte[] messageBytes = new byte[length];
         in.readFully(messageBytes);
 
+        Message message = new Message(messageBytes);
+        LOGGER.info("Received a message: \nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
+
         // Build the message from the bytes
-        return new Message(messageBytes);
+        return message;
     }
 
+    /**
+     * Send a message on a given output stream
+     */
     public static void sendMessageToSocket(DataOutputStream out, Message message) throws IOException {
-        // Get the total bytes written
+        // Get the total bytes written (this might send 1 to 3 more bits, since the unitary format is byte)
         int length = message.getWrittenByte();
-
-        // Send it
+        // Send the total length
         out.writeInt(length);
 
-        // Then send all the data
+        // Then send all the data (but crop just to what was written)
         out.write(message.getData(), 0, length);
 
         // And assure the message is fully sent
         out.flush();
+
+        LOGGER.info("Sent a message: \nlength=" + length + "\ndata=" + message.getDataAsBitsInString());
     }
 }

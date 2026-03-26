@@ -77,7 +77,7 @@ public class ClientApp {
 
             String input = CliHelper.inputString("What do you want to say ?", 0, 0);
             Message message = new Message(Message.CTS_MESSAGE);
-            message.AddString(input);
+            message.addString(input);
             try {
                 Message.sendMessageToSocket(connection.getOut(), message);
             } catch (IOException e) {
@@ -89,8 +89,8 @@ public class ClientApp {
     public void onMessageReceived(Message message) {
         LOGGER.info("New message received : \nlength=" + message.getData().length + "\ndata=" + message.getDataAsBitsInString());
 
-        byte messageId = message.ReadByte(Message.MESSAGE_ID_BITS);
-        LOGGER.info("MessageId="+messageId + " int="+ message.ReadByte(5));
+        byte messageId = message.readByte(Message.MESSAGE_ID_BITS);
+        LOGGER.info("MessageId="+messageId + " int="+ message.readByte(5));
     }
 
     @Override

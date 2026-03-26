@@ -22,7 +22,7 @@ public class ClientHandler extends Thread {
 
         // Send a welcome message !
         Message message = new Message((byte)1);
-        message.AddInt(0xA0, 8);
+        message.addInt(0xA0, 8);
 
         try {
             connectionToClient.send(message);
@@ -36,7 +36,7 @@ public class ClientHandler extends Thread {
             // Read
             try {
                 Message readMessage = Message.readMessageFromSocket(connectionToClient.getIn());
-                LOGGER.info("Received a message ! length=" + readMessage.getWrittenByte());
+                server.onMessageReceived(connectionToClient, readMessage);
             } catch (IOException e) {
                 LOGGER.warning("Failed to read message e=" + e.getMessage());
             }

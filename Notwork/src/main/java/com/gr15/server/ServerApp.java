@@ -63,7 +63,7 @@ public class ServerApp {
 
         // Send the Hello Message to the client
         Message message = new Message(Message.STC_HELLO);
-        message.AddString("Salut !");
+        message.addString("Salut !");
         LOGGER.info(message.getDataAsBitsInString());
 
         if (serverSocket != null) {
@@ -132,6 +132,16 @@ public class ServerApp {
 
     public void stop() {
         isStopping = true;
+    }
+
+    public void onMessageReceived(ConnectionToClient client, Message message) {
+        LOGGER.info("Received a message ! from=" + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
+
+        int messageId = message.readInt(Message.MESSAGE_ID_BITS);
+        LOGGER.info("MessageId=" + messageId);
+
+        String test = message.readString();
+        LOGGER.info(test);
     }
 
     public int getPort() {
