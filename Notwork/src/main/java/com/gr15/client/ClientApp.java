@@ -16,10 +16,11 @@ public class ClientApp {
 
     private String serverHostname;
     private int serverPort;
+
     private Connection connection;
     private ListeningThread listeningThread;
 
-    private Thread mainThread;
+    private final Thread mainThread;
 
     private int clientId;
 
@@ -174,7 +175,6 @@ public class ClientApp {
 
         CliHelper.show("[Server][RemoveClient]: clientId=" + message.getClientId());
     }
-
 
     @Override
     public String toString() {
