@@ -55,6 +55,7 @@ public class ClientApp {
             this.connection = new Connection(this.serverHostname, this.serverPort, false);
         } catch (IOException e) {
             Logger.error("Exception while creating new connection", e);
+            throw new IllegalStateException("Failed to create the connection");
         }
     }
 
@@ -69,6 +70,7 @@ public class ClientApp {
             this.connection = new Connection(this.serverHostname, this.serverPort, false);
         } catch (IOException e) {
             Logger.error("Exception while creating new connection", e);
+            throw new IllegalStateException("Failed to create the connection");
         }
     }
 
@@ -86,7 +88,10 @@ public class ClientApp {
                 Logger.error("Failed to connect", e);
             }
 
-            ThreadUtils.safeSleep(1000);
+            if (!ThreadUtils.safeSleep(1000)){
+                Thread.currentThread().interrupt();
+                return;
+            }
         }
 
         // Open the listening thread
