@@ -33,6 +33,11 @@ public class ClientManager extends Manager<ClientConnection> {
         return connectionsToClient;
     }
 
+    @Override
+    public int getPort() {
+        return server.getInitialConfig().getClientSocketPort();
+    }
+
     public ClientManager(ServerApp server) {
         super(server);
     }

@@ -1,20 +1,15 @@
 package com.gr15.server.managers;
 
-import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.connections.RemoteConnection;
 import com.gr15.common.listening.ListeningThread;
-import com.gr15.common.message.STC_MessageRemoveClient;
 import com.gr15.server.ServerApp;
 import com.gr15.server.SocketAcceptingThread;
-import com.gr15.server.connections.ClientConnection;
-import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 
 public abstract class Manager<T extends RemoteConnection> {
     protected final ServerApp server;
@@ -25,6 +20,8 @@ public abstract class Manager<T extends RemoteConnection> {
     private SocketAcceptingThread acceptingThread;
 
     public abstract T[] getConnections();
+
+    public abstract int getPort();
 
     public Manager(ServerApp server) {
         this.server = server;
@@ -39,7 +36,7 @@ public abstract class Manager<T extends RemoteConnection> {
 
         // Start the server socket
         try {
-            serverSocket = new ServerSocket(server.getInitialConfig().getClientSocketPort());
+            serverSocket = new ServerSocket(getPort());
         } catch (IOException e) {
             Logger.error("Failed to create the server socket", e);
             throw new RuntimeException("Failed to create the server socket", e);
