@@ -47,6 +47,7 @@ public class ClientApp {
             }
 
             if (!ThreadUtils.safeSleep(1000)) {
+                connection.close();
                 return;
             }
         }

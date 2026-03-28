@@ -50,11 +50,7 @@ public class ClientConfig {
         // Read the args to get configuration from it
         for (String arg : args) {
             if (arg.startsWith(ARG_SERVER_HOSTNAME_KEY)) {
-                try {
-                    config.setServerHostname(arg.substring(ARG_SERVER_HOSTNAME_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
+                config.setServerHostname(arg.substring(ARG_SERVER_HOSTNAME_KEY.length()));
             } else if (arg.startsWith(ARG_SERVER_PORT_KEY)) {
                 try {
                     config.setServerPort(Integer.parseInt(arg.substring(ARG_SERVER_PORT_KEY.length())));
