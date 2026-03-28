@@ -1,5 +1,6 @@
-package com.gr15.common;
+package com.gr15.common.connections;
 
+import com.gr15.common.Message;
 import com.gr15.utils.Logger;
 
 import java.io.DataInputStream;

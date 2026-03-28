@@ -6,7 +6,6 @@ public class ThreadUtils {
             Thread.sleep(millis);
             return true;
         } catch (InterruptedException e) {
-            Logger.error("Exception while trying to sleep", e);
             return false;
         }
     }

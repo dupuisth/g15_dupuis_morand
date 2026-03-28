@@ -1,11 +1,13 @@
-package com.gr15.server;
+package com.gr15.server.handlers;
 
 import com.gr15.common.Message;
 import com.gr15.common.message.STC_MessageHello;
 import com.gr15.common.message.STC_MessageNewClient;
+import com.gr15.server.ServerApp;
+import com.gr15.server.connections.ClientConnection;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
-import java.io.EOFException;
 import java.io.IOException;
 
 /**
@@ -14,6 +16,8 @@ import java.io.IOException;
 public class ClientHandler extends Thread {
     private final ClientConnection clientConnection;
     private final ServerApp server;
+
+    private volatile boolean shouldStop = false;
 
     public ClientHandler(ClientConnection clientConnection, ServerApp server) {
         this.clientConnection = clientConnection;
@@ -34,22 +38,20 @@ public class ClientHandler extends Thread {
 
         // Send the "NEW_CLIENT" to everyone else
         Message newClientMessage = STC_MessageNewClient.CreateMessage(clientConnection.getClientId());
-        try {
-            server.sendToClients(newClientMessage, clientConnection);
-        } catch (IOException e) {
-            Logger.warn("Failed to send new client message e="+e.getMessage());
-        }
+        server.getClientManager().sendToAll(newClientMessage, clientConnection);
 
-        while (clientConnection.isConnected()) {
-            // Read
-            try {
-                Message readMessage = clientConnection.read();
-                server.onMessageReceived(clientConnection, readMessage);
-            } catch (Exception e) {
-                Logger.warn("Failed to read message e=" + e.getMessage());
-                clientConnection.close();
-                server.onClientDisconnected(clientConnection);
+
+        // Do something later on, maybe implement the ping-pong stuff...
+        while (!shouldStop && clientConnection.isConnected()) {
+            if (!ThreadUtils.safeSleep(1000)) {
+                break;
             }
         }
+
+        Logger.info("Stopped Client handler");
+    }
+
+    public void setShouldStop() {
+        shouldStop = true;
     }
 }

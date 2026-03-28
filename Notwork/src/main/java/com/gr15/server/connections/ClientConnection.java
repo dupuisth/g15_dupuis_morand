@@ -1,6 +1,7 @@
-package com.gr15.server;
+package com.gr15.server.connections;
 
-import com.gr15.common.RemoteConnection;
+import com.gr15.common.ClientId;
+import com.gr15.common.connections.RemoteConnection;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -18,5 +19,10 @@ public class ClientConnection extends RemoteConnection {
 
     public int getClientId() {
         return clientId;
+    }
+
+    @Override
+    public String toString() {
+        return ClientId.toString(clientId);
     }
 }

@@ -2,8 +2,8 @@ package com.gr15.client;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
+import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.Message;
-import com.gr15.common.RemoteConnection;
 import com.gr15.common.message.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
@@ -18,7 +18,6 @@ public class ClientApp {
     private int serverPort;
 
     private Connection connection;
-    private ListeningThread listeningThread;
 
     private final Thread mainThread;
 
@@ -95,13 +94,12 @@ public class ClientApp {
         }
 
         // Open the listening thread
-        listeningThread = new ListeningThread(this, connection);
-        listeningThread.start();
+        ListeningThread<Connection> listenThread = new ListeningThread<>(connection, this::onMessageReceived, this::onCriticalListeningError);
+        listenThread.start();
 
         // Prompt for a message
         while (connection.isConnected()) {
             // Take the client input
-
             // THIS WILL BLOCK UNTIL THE USER PRESS ENTER, SO, IF A DISCONNECTION HAPPEN
             // THE USER WILL NOT BE NOTIFIED UNTIL THIS END
             // todo: FIX THIS LATER
@@ -113,9 +111,21 @@ public class ClientApp {
                 Logger.warn("Failed to send message to server e=" + e.getMessage());
             }
         }
+        Logger.info("Stopping everything");
+
+
+        listenThread.setShouldStop();
+        connection.close();
+        listenThread.interrupt();
+        try {
+            listenThread.join(500);
+        } catch (InterruptedException e) {
+            Logger.error("Exception while joining listening thread", e);
+        }
+
     }
 
-    public void onCriticalListeningError(Exception e) {
+    public boolean onCriticalListeningError(Connection connection, Exception e) {
         Logger.error("Critical error, closing the socket", e);
 
         // Stop the socket
@@ -123,9 +133,11 @@ public class ClientApp {
 
         // Interrupt the main thread (this will not interrupt the scanner)
         mainThread.interrupt();
+
+        return true;
     }
 
-    public void onMessageReceived(Message message) {
+    public void onMessageReceived(Connection connection, Message message) {
         Logger.debug("New message received : length=" + message.getData().length + " data=" + message.getDataAsBitsInString());
 
         // Read the message header
