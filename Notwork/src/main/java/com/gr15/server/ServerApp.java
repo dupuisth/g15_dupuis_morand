@@ -8,12 +8,15 @@ import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
 import com.gr15.common.message.STC_MessageRemoveClient;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-
+/**
+ * Application to run for the server
+ */
 public class ServerApp {
     public static final String SERVER_ID_KEY = "serverId=";
     public static final String SERVER_PORT_KEY = "port=";
@@ -22,7 +25,9 @@ public class ServerApp {
     private int port;
     private int serverId;
 
+    /** Socket used for the clients */
     private ServerSocket serverSocket;
+    /** Array of all the clients connected (index => localId) */
     private final ConnectionToClient[] connectionsToClient = new ConnectionToClient[ClientId.MAX_CLIENTS];
 
     public ServerApp(String[] args) {
@@ -30,6 +35,7 @@ public class ServerApp {
         port = -1;
         serverId = -1;
 
+        // Read the args to get configuration from it
         for (String arg : args) {
             if (arg.startsWith(SERVER_ID_KEY)) {
                 try {
@@ -62,6 +68,7 @@ public class ServerApp {
     public void run() {
         Logger.info("Started new ServerApp");
 
+        // Prevent running the server two times
         if (serverSocket != null) {
             Logger.warn("Server already started");
             return;
@@ -71,82 +78,92 @@ public class ServerApp {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            Logger.error("Failed to create the server socket e=" + e.getMessage() , e);
+            Logger.error("Failed to create the server socket", e);
             return;
         }
 
+        // Start the server accepting thread
+        SocketAcceptingThread serverSocketAcceptingThread = new SocketAcceptingThread(serverSocket, this::handleNewClientSocket);
+        serverSocketAcceptingThread.start();
+
+        // Keep alive
         while (!isStopping) {
-            Socket socket;
-            try {
-                // Block until a client open a connection
-                socket = serverSocket.accept();
-            } catch (IOException e) {
-                Logger.error("Failed to accept socket: " + e.getMessage(), e);
-                // Block again
-                continue;
-            }
-
-            Logger.info("New client inet=" + socket.getInetAddress() + " port=" + socket.getPort());
-
-            // Create a new connection
-            ConnectionToClient connectionToClient = null;
-
-            int nextClientId;
-            try {
-                nextClientId = getNextClientId();
-            } catch (RuntimeException e) {
-                Logger.error("Failed to create the client id, e=" + e.getMessage(), e);
-
-                // Close
-                try {
-                    socket.close();
-                } catch (IOException ex) {
-                    // Ignore
-                }
-
-                // Ignore this socket, we can't accept him
-                continue;
-            }
-
-            try {
-                connectionToClient = new ConnectionToClient(socket,  nextClientId);
-            } catch (IOException e) {
-                Logger.error("Failed to bind new client, disconnecting it", e);
-
-                try {
-                    socket.close();
-                } catch (IOException ex) {
-                    Logger.error("Failed to close the connection", ex);
-                }
-            }
-
-            if (connectionToClient == null) {
-                // Error while binding the client, ignore him
-                continue;
-            }
-
-            // Add it to the clients list
-            connectionsToClient[ClientId.GetLocalId(nextClientId)] = connectionToClient;
-
-            // Start the handler
-            ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
-            clientHandler.start();
-
-            Logger.info("Created new client, id="+nextClientId + " localId=" + ClientId.GetLocalId(nextClientId));
+            ThreadUtils.safeSleep(1000);
         }
 
         // Destroy the objects
+        Logger.info("Cleaning up");
         if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocketAcceptingThread.setShouldStop();
+            serverSocketAcceptingThread.interrupt();
+
+            try {
+                serverSocketAcceptingThread.join(1000);
+            } catch (InterruptedException e) {
+                Logger.error("Exception while trying waiting for serverSocketAcceptingThread ending", e);
+            }
+
             try {
                 serverSocket.close();
             } catch (IOException e) {
                 Logger.error("Error while closing socket: " + e.getMessage(), e);
             }
         }
+        Logger.info("Cleanup done, exiting");
     }
 
     public void stop() {
+        Logger.debug("Stop received");
         isStopping = true;
+    }
+
+    private void handleNewClientSocket(Socket socket) {
+        Logger.info("New client socket inet=" + socket.getInetAddress() + ":" + socket.getPort());
+
+        // Create a new connection
+        ConnectionToClient connectionToClient = null;
+
+        int nextClientId;
+        try {
+            nextClientId = getNextClientId();
+        } catch (RuntimeException e) {
+            Logger.error("Failed to create the client id", e);
+
+            // Close
+            try {
+                socket.close();
+            } catch (IOException ex) {
+                // Ignore
+            }
+
+            // Ignore this socket, we can't accept him
+            return;
+        }
+
+        try {
+            connectionToClient = new ConnectionToClient(socket,  nextClientId);
+        } catch (IOException e) {
+            Logger.error("Failed to bind new client, disconnecting it", e);
+            try {
+                socket.close();
+            } catch (IOException ex) {
+                Logger.error("Failed to close the connection", ex);
+            }
+        }
+
+        if (connectionToClient == null) {
+            // Error while binding the client, ignore him
+            return;
+        }
+
+        // Add it to the clients list
+        connectionsToClient[ClientId.GetLocalId(nextClientId)] = connectionToClient;
+
+        // Start the handler
+        ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
+        clientHandler.start();
+
+        Logger.info("Created new client, c=" + ClientId.toString(nextClientId));
     }
 
     public void onClientDisconnected(ConnectionToClient client) {
@@ -172,7 +189,7 @@ public class ServerApp {
     }
 
     /**
-     * When a message is received
+     * When a message is received from a client
      */
     public void onMessageReceived(ConnectionToClient client, Message message) {
         Logger.debug("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
@@ -193,6 +210,9 @@ public class ServerApp {
         }
     }
 
+    /**
+     * Handle a message from a client
+     */
     public void handleMessage(ConnectionToClient client, CTS_Message message) {
         Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 

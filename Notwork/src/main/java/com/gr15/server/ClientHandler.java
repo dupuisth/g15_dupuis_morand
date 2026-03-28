@@ -8,6 +8,9 @@ import com.gr15.utils.Logger;
 import java.io.EOFException;
 import java.io.IOException;
 
+/**
+ * Thread created when a client connects to the server, listen for message from the client
+ */
 public class ClientHandler extends Thread {
     private final ConnectionToClient connectionToClient;
     private final ServerApp server;

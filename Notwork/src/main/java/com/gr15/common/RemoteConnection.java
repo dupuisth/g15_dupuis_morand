@@ -1,4 +1,4 @@
-package com.gr15.server;
+package com.gr15.common;
 
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
@@ -10,28 +10,26 @@ import java.io.IOException;
 import java.net.Socket;
 
 /**
- * Represent a connection to a client, handle the socket and output / input streams
+ * Represent a connection to a remote device via a socket
  */
-public class ConnectionToClient {
-    private final int clientId;
+public class RemoteConnection {
     private final Socket socket;
     private final DataOutputStream out;
     private final DataInputStream in;
 
-    public ConnectionToClient(Socket socket, int clientId) throws IOException {
+    public RemoteConnection(Socket socket) throws IOException {
         this.socket = socket;
-        this.clientId = clientId;
         try {
             this.out = new DataOutputStream(socket.getOutputStream());
             this.in = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
-            Logger.warn("Failed to bind socket output/input");
+            Logger.error("Failed to bind socket output/input", e);
             throw e;
         }
     }
 
     /**
-     * Send a message to the client
+     * Send a message to the remote
      * @throws IOException Exception while sending
      */
     public void send(Message message) throws IOException {
@@ -47,16 +45,19 @@ public class ConnectionToClient {
             send(message);
             return true;
         } catch (IOException e) {
-            Logger.error("Exception thrown when sending message c=" + ClientId.toString(clientId), e);
+            Logger.error("Exception thrown when sending message", e);
             return false;
         }
     }
 
+    /**
+     * Close the socket
+     */
     public void close() {
         try {
             socket.close();
         } catch (IOException e) {
-            Logger.warn("Exception while closing socket c=" + ClientId.toString(clientId) + ", e=" + e.getMessage());
+            Logger.error("Exception while closing socket", e);
         }
     }
 
