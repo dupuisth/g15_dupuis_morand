@@ -1,32 +1,33 @@
 package com.gr15.client;
 
 import com.gr15.common.Message;
+import com.gr15.common.RemoteConnection;
 import com.gr15.utils.Logger;
 
-import java.io.EOFException;
-
+/**
+ * Thread that handle accepting on a socket
+ */
 public class ListeningThread extends Thread {
     private final ClientApp client;
+    private final Connection connection;
 
-    public ListeningThread(ClientApp client) {
+
+
+    public ListeningThread(ClientApp client, Connection connection) {
         this.client = client;
+        this.connection = connection;
     }
 
     @Override
     public void run() {
-        super.run();
-
-            // Continuous listening
-            while (client.getConnection().isConnected() ) {
-                try {
-                    Message message = client.getConnection().read();
-                    client.onMessageReceived(message);
-                } catch (EOFException e) {
-                    Logger.error("Received a EOF when try to read, closing the connection", e);
-                    client.getConnection().close();
-                } catch (Exception e) {
-                    Logger.error("Error while trying to read message ! e=" + e.getMessage(), e);
-                }
+        while (connection.isConnected()) {
+            try {
+                Message message = connection.read();
+                client.onMessageReceived(message);
+            } catch (Exception e) {
+                Logger.error("Exception while trying to read message", e);
+                client.onCriticalListeningError(e);
             }
         }
+    }
 }

@@ -89,7 +89,7 @@ public abstract class RemoteConnection {
     /**
      * Read a message (blocking)
      */
-    public Message read() throws Exception {
+    public Message read() throws IOException {
         // No reason to have multiple readers, but ensure it
         synchronized (readLock) {
             // Read the length

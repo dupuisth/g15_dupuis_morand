@@ -3,6 +3,7 @@ package com.gr15.client;
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
+import com.gr15.common.RemoteConnection;
 import com.gr15.common.message.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
@@ -18,9 +19,13 @@ public class ClientApp {
     private Connection connection;
     private ListeningThread listeningThread;
 
+    private Thread mainThread;
+
     private int clientId;
 
     public ClientApp(String[] args) {
+        mainThread = Thread.currentThread();
+
         serverHostname = null;
         serverPort = -1;
 
@@ -53,6 +58,8 @@ public class ClientApp {
     }
 
     public ClientApp(String serverHostname, int serverPort) {
+        mainThread = Thread.currentThread();
+
         this.serverHostname = serverHostname;
         this.serverPort = serverPort;
 
@@ -82,13 +89,16 @@ public class ClientApp {
         }
 
         // Open the listening thread
-        listeningThread = new ListeningThread(this);
+        listeningThread = new ListeningThread(this, connection);
         listeningThread.start();
 
         // Prompt for a message
         while (connection.isConnected()) {
             // Take the client input
 
+            // THIS WILL BLOCK UNTIL THE USER PRESS ENTER, SO, IF A DISCONNECTION HAPPEN
+            // THE USER WILL NOT BE NOTIFIED UNTIL THIS END
+            // todo: FIX THIS LATER
             String input = CliHelper.inputString(null, 0, 0);
             Message message = CTS_Message.CreateMessage(input);
             try {
@@ -97,6 +107,16 @@ public class ClientApp {
                 Logger.warn("Failed to send message to server e=" + e.getMessage());
             }
         }
+    }
+
+    public void onCriticalListeningError(Exception e) {
+        Logger.error("Critical error, closing the socket", e);
+
+        // Stop the socket
+        connection.close();
+
+        // Interrupt the main thread (this will not interrupt the scanner)
+        mainThread.interrupt();
     }
 
     public void onMessageReceived(Message message) {

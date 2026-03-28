@@ -45,13 +45,10 @@ public class ClientHandler extends Thread {
             try {
                 Message readMessage = clientConnection.read();
                 server.onMessageReceived(clientConnection, readMessage);
-            } catch (EOFException e) {
-                // EOF is thrown when the socket is closed
-                Logger.warn("Received a EOF when try to read from c=" + clientConnection.getClientId() + ", closing the connection");
+            } catch (Exception e) {
+                Logger.warn("Failed to read message e=" + e.getMessage());
                 clientConnection.close();
                 server.onClientDisconnected(clientConnection);
-            }   catch (Exception e) {
-                Logger.warn("Failed to read message e=" + e.getMessage());
             }
         }
     }
