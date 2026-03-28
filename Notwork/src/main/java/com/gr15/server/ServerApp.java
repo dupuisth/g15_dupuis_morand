@@ -17,7 +17,7 @@ import java.net.Socket;
  * Application to run for the server
  */
 public class ServerApp {
-    private boolean isStopping = false;
+    private volatile boolean isStopping = false;
 
     private final ServerConfig initialConfig;
 
