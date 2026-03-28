@@ -1,7 +1,6 @@
 package com.gr15.client;
 
 import com.gr15.common.Message;
-import com.gr15.common.RemoteConnection;
 import com.gr15.utils.Logger;
 
 /**

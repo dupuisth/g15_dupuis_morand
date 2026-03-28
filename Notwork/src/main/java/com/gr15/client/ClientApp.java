@@ -3,7 +3,6 @@ package com.gr15.client;
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
-import com.gr15.common.RemoteConnection;
 import com.gr15.common.message.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;

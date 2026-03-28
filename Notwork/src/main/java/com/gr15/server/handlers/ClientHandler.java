@@ -1,11 +1,12 @@
-package com.gr15.server;
+package com.gr15.server.handlers;
 
 import com.gr15.common.Message;
 import com.gr15.common.message.STC_MessageHello;
 import com.gr15.common.message.STC_MessageNewClient;
+import com.gr15.server.ServerApp;
+import com.gr15.server.connections.ClientConnection;
 import com.gr15.utils.Logger;
 
-import java.io.EOFException;
 import java.io.IOException;
 
 /**

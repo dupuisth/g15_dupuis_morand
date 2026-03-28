@@ -6,6 +6,8 @@ import com.gr15.common.message.CTS_Message;
 import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
 import com.gr15.common.message.STC_MessageRemoveClient;
+import com.gr15.server.connections.ClientConnection;
+import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
 

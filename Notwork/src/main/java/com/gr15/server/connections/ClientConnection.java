@@ -1,6 +1,6 @@
-package com.gr15.server;
+package com.gr15.server.connections;
 
-import com.gr15.common.RemoteConnection;
+import com.gr15.common.connections.RemoteConnection;
 
 import java.io.IOException;
 import java.net.Socket;
