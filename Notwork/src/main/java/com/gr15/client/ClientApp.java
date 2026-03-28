@@ -5,6 +5,7 @@ import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.message.*;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 
@@ -43,13 +44,24 @@ public class ClientApp {
             this.serverPort = CliHelper.inputInt("Enter the server port", 2222, 8888);
         }
 
-        this.connection = new Connection(this.serverHostname, this.serverPort);
+        try {
+            // Should never throw since we do not connect directly
+            this.connection = new Connection(this.serverHostname, this.serverPort, false);
+        } catch (IOException e) {
+            Logger.error("Exception while creating new connection", e);
+        }
     }
 
     public ClientApp(String serverHostname, int serverPort) {
         this.serverHostname = serverHostname;
         this.serverPort = serverPort;
-        this.connection = new Connection(this.serverHostname, this.serverPort);
+
+        try {
+            // Should never throw since we do not connect directly
+            this.connection = new Connection(this.serverHostname, this.serverPort, false);
+        } catch (IOException e) {
+            Logger.error("Exception while creating new connection", e);
+        }
     }
 
     public Connection getConnection() {
@@ -60,13 +72,13 @@ public class ClientApp {
         Logger.info("Started new ClientApp");
 
         while (!connection.isConnected()) {
-            connection.start();
-
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                return;
+                connection.connect();
+            } catch (IOException e) {
+                Logger.error("Failed to connect", e);
             }
+
+            ThreadUtils.safeSleep(1000);
         }
 
         // Open the listening thread
@@ -80,7 +92,7 @@ public class ClientApp {
             String input = CliHelper.inputString(null, 0, 0);
             Message message = CTS_Message.CreateMessage(input);
             try {
-                Message.sendMessageToSocket(connection.getOut(), message);
+                connection.send(message);
             } catch (IOException e) {
                 Logger.warn("Failed to send message to server e=" + e.getMessage());
             }

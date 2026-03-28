@@ -24,7 +24,7 @@ public class ServerApp {
     /** Socket used for the clients */
     private ServerSocket serverSocket;
     /** Array of all the clients connected (index => localId) */
-    private final ConnectionToClient[] connectionsToClient = new ConnectionToClient[ClientId.MAX_CLIENTS];
+    private final ClientConnection[] connectionsToClient = new ClientConnection[ClientId.MAX_CLIENTS];
 
     public ServerApp(ServerConfig initialConfig) {
         this.initialConfig = initialConfig;
@@ -91,7 +91,7 @@ public class ServerApp {
         Logger.info("New client socket inet=" + socket.getInetAddress() + ":" + socket.getPort());
 
         // Create a new connection
-        ConnectionToClient connectionToClient = null;
+        ClientConnection clientConnection = null;
 
         int nextClientId;
         try {
@@ -111,7 +111,7 @@ public class ServerApp {
         }
 
         try {
-            connectionToClient = new ConnectionToClient(socket,  nextClientId);
+            clientConnection = new ClientConnection(socket,  nextClientId);
         } catch (IOException e) {
             Logger.error("Failed to bind new client, disconnecting it", e);
             try {
@@ -121,22 +121,22 @@ public class ServerApp {
             }
         }
 
-        if (connectionToClient == null) {
+        if (clientConnection == null) {
             // Error while binding the client, ignore him
             return;
         }
 
         // Add it to the clients list
-        connectionsToClient[ClientId.GetLocalId(nextClientId)] = connectionToClient;
+        connectionsToClient[ClientId.GetLocalId(nextClientId)] = clientConnection;
 
         // Start the handler
-        ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
+        ClientHandler clientHandler = new ClientHandler(clientConnection, this);
         clientHandler.start();
 
         Logger.info("Created new client, c=" + ClientId.toString(nextClientId));
     }
 
-    public void onClientDisconnected(ConnectionToClient client) {
+    public void onClientDisconnected(ClientConnection client) {
         // Remove the client from the list, and notify clients
 
         try {
@@ -161,7 +161,7 @@ public class ServerApp {
     /**
      * When a message is received from a client
      */
-    public void onMessageReceived(ConnectionToClient client, Message message) {
+    public void onMessageReceived(ClientConnection client, Message message) {
         Logger.debug("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
 
         // Read the message header
@@ -183,7 +183,7 @@ public class ServerApp {
     /**
      * Handle a message from a client
      */
-    public void handleMessage(ConnectionToClient client, CTS_Message message) {
+    public void handleMessage(ClientConnection client, CTS_Message message) {
         Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 
         // Send to all clients except sender
@@ -195,22 +195,22 @@ public class ServerApp {
         }
     }
 
-    public void sendToClient(ConnectionToClient client, Message message) throws IOException {
+    public void sendToClient(ClientConnection client, Message message) throws IOException {
         client.send(message);
     }
 
     public void sendToClients(Message message) throws IOException {
         synchronized (connectionsToClient) {
-            for (ConnectionToClient client : connectionsToClient) {
+            for (ClientConnection client : connectionsToClient) {
                 if (client == null) continue;
                 client.send(message);
             }
         }
     }
 
-    public void sendToClients(Message message, ConnectionToClient except) throws IOException {
+    public void sendToClients(Message message, ClientConnection except) throws IOException {
         synchronized (connectionsToClient) {
-            for (ConnectionToClient client : connectionsToClient) {
+            for (ClientConnection client : connectionsToClient) {
                 if (client == null || client == except) continue;
                 client.send(message);
             }

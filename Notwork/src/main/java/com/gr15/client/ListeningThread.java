@@ -19,7 +19,7 @@ public class ListeningThread extends Thread {
             // Continuous listening
             while (client.getConnection().isConnected() ) {
                 try {
-                    Message message = Message.readMessageFromSocket(client.getConnection().getIn());
+                    Message message = client.getConnection().read();
                     client.onMessageReceived(message);
                 } catch (EOFException e) {
                     Logger.error("Received a EOF when try to read, closing the connection", e);
