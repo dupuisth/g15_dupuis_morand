@@ -2,6 +2,7 @@ package com.gr15.admin;
 
 import com.gr15.Application;
 import com.gr15.server.ServerApp;
+import com.gr15.server.ServerConfig;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ProcessUtils;
 
@@ -17,17 +18,10 @@ public class ServerManager {
         servers = new ArrayList<>();
     }
 
-    public void addServer(int serverId, int serverPort) {
+    public void addServer(ServerConfig config) {
         java.util.ArrayList<String> arguments = new ArrayList<>();
         arguments.add(Application.SERVER_KEY);
-
-        if (serverId > 0) {
-            arguments.add(ServerApp.SERVER_ID_KEY + serverId);
-        }
-
-        if (serverPort > 0) {
-            arguments.add(ServerApp.SERVER_PORT_KEY + serverPort);
-        }
+        arguments.addAll(config.toArgs());
 
         try {
             Process process = ProcessUtils.startApplicationInNewTerminal(arguments);

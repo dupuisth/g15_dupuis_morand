@@ -76,8 +76,4 @@ public class RemoteConnection {
     public boolean isConnected() {
         return socket != null && socket.isConnected() && !socket.isClosed();
     }
-
-    public int getClientId() {
-        return clientId;
-    }
 }

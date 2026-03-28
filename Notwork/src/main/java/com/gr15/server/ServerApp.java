@@ -1,6 +1,5 @@
 package com.gr15.server;
 
-import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.message.CTS_Message;
@@ -18,51 +17,22 @@ import java.net.Socket;
  * Application to run for the server
  */
 public class ServerApp {
-    public static final String SERVER_ID_KEY = "serverId=";
-    public static final String SERVER_PORT_KEY = "port=";
-
     private boolean isStopping = false;
-    private int port;
-    private int serverId;
+
+    private final ServerConfig initialConfig;
 
     /** Socket used for the clients */
     private ServerSocket serverSocket;
     /** Array of all the clients connected (index => localId) */
     private final ConnectionToClient[] connectionsToClient = new ConnectionToClient[ClientId.MAX_CLIENTS];
 
-    public ServerApp(String[] args) {
-        // Default to bad values
-        port = -1;
-        serverId = -1;
+    public ServerApp(ServerConfig initialConfig) {
+        this.initialConfig = initialConfig;
 
-        // Read the args to get configuration from it
-        for (String arg : args) {
-            if (arg.startsWith(SERVER_ID_KEY)) {
-                try {
-                    serverId = Integer.parseInt(arg.substring(SERVER_ID_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            } else if (arg.startsWith(SERVER_PORT_KEY)) {
-                try {
-                    port = Integer.parseInt(arg.substring(SERVER_PORT_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            }
+        if (!initialConfig.validateConfiguration()) {
+            Logger.error("Invalid configuration config=" + initialConfig);
+            throw new IllegalArgumentException("Invalid configuration");
         }
-
-        if (this.serverId < 0) {
-            this.serverId = CliHelper.inputInt("Enter the server ID", 0, 32);
-        }
-        if (this.port <= 0) {
-            this.port = CliHelper.inputInt("Enter the server port", 2222, 8888);
-        }
-    }
-
-    public ServerApp(int serverId, int port) {
-        this.serverId = serverId;
-        this.port = port;
     }
 
     public void run() {
@@ -76,7 +46,7 @@ public class ServerApp {
 
         // Start the server socket
         try {
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(initialConfig.getClientSocketPort());
         } catch (IOException e) {
             Logger.error("Failed to create the server socket", e);
             return;
@@ -252,31 +222,11 @@ public class ServerApp {
         {
             for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
                 if (connectionsToClient[i] == null) {
-                    return ClientId.Create(serverId, i);
+                    return ClientId.Create(initialConfig.getServerId(), i);
                 }
             }
         }
 
         throw new RuntimeException("No more space in the network !");
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public int getServerId() {
-        return serverId;
-    }
-
-    public ConnectionToClient[] getConnectionsToClient() {
-        return connectionsToClient;
-    }
-
-    @Override
-    public String toString() {
-        return "ServerApp{" +
-                "port=" + port +
-                ", serverId=" + serverId +
-                '}';
     }
 }

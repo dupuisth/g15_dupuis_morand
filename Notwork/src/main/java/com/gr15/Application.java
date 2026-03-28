@@ -5,6 +5,7 @@ import com.gr15.admin.AdminApp;
 import com.gr15.cli.CliHelper;
 import com.gr15.client.ClientApp;
 import com.gr15.server.ServerApp;
+import com.gr15.server.ServerConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,8 @@ public class Application {
             }
 
             case Server -> {
-                ServerApp app = new ServerApp(args);
+                ServerConfig serverConfig = ServerConfig.FromArgs(args);
+                ServerApp app = new ServerApp(serverConfig);
                 app.run();
             }
 
