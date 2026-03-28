@@ -11,6 +11,7 @@ import com.gr15.utils.Logger;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 
 public abstract class Manager<T extends RemoteConnection, K extends ConnectionWrapper<T>> {
     protected final ServerApp server;
@@ -98,7 +99,6 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
      */
     protected abstract boolean onListeningError(T remoteConnection, Exception e);
 
-
     /**
      * Send a message to a connection (will queue)
      */
@@ -113,6 +113,12 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
      * Send a message to all the connection except the given one (will queue)
      */
     public abstract void sendToAll(Message message, T except);
+
+    /**
+     * Send a message to a list of connection (will queue)
+     */
+    public abstract void send(List<T> remoteConnection, Message message);
+
 
     /**
      * Return the wrapper of the connection

@@ -3,9 +3,7 @@ package com.gr15.server.managers;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
-import com.gr15.common.message.CTS_Message;
-import com.gr15.common.message.MessageCTS;
-import com.gr15.common.message.STC_Message;
+import com.gr15.common.message.*;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.connections.ClientWrapper;
@@ -14,7 +12,9 @@ import com.gr15.utils.Logger;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
 public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
@@ -120,6 +120,9 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     @Override
     protected void stopConnection(ClientConnection connection) {
+        Message removeMessage = STC_MessageRemoveClient.CreateMessage(connection.getClientId());
+        List<ClientConnection> snapshot = new ArrayList<>();
+
         synchronized (getConnectionsLock()) {
             ClientWrapper wrapper = getWrapped(connection);
             if (wrapper == null) {
@@ -151,8 +154,18 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
             // Remove the connection
             getConnections()[localId] = null;
+
+            // Snapshot the current clients while still under the connection lock
+            for (ClientWrapper cw : connectionsToClient) {
+                if (cw != null && cw.getConnection() != null) {
+                    snapshot.add(cw.getConnection());
+                }
+            }
         }
         Logger.info("Fully stopped connection to " + connection);
+
+        // Notify the clients
+        send(snapshot, removeMessage);
     }
 
     @Override
@@ -201,8 +214,8 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     @Override
     public void sendToAll(Message message) {
-        synchronized (messageToSendQueue) {
-            synchronized (getConnectionsLock()) {
+        synchronized (getConnectionsLock()) {
+            synchronized (messageToSendQueue) {
                 for (ClientWrapper wrapper : connectionsToClient) {
                     if (wrapper == null) continue;
                     messageToSendQueue.add(new MessageToSend(wrapper.getConnection(), message));
@@ -213,12 +226,21 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     @Override
     public void sendToAll(Message message, ClientConnection except) {
-        synchronized (messageToSendQueue) {
-            synchronized (getConnectionsLock()) {
+        synchronized (getConnectionsLock()) {
+            synchronized (messageToSendQueue) {
                 for (ClientWrapper wrapper : connectionsToClient) {
                     if (wrapper == null || wrapper.getConnection() == null || wrapper.getConnection() == except) continue;
                     messageToSendQueue.add(new MessageToSend(wrapper.getConnection(), message));
                 }
+            }
+        }
+    }
+
+    @Override
+    public void send(List<ClientConnection> remoteConnections, Message message) {
+        synchronized (messageToSendQueue) {
+            for (ClientConnection connection : remoteConnections) {
+                messageToSendQueue.add(new MessageToSend(connection, message));
             }
         }
     }

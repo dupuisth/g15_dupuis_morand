@@ -1,6 +1,7 @@
 package com.gr15.admin;
 
 import com.gr15.cli.CliHelper;
+import com.gr15.client.ClientConfig;
 import com.gr15.server.ServerConfig;
 import com.gr15.utils.Logger;
 
@@ -13,7 +14,7 @@ public class AdminApp {
     private final ClientManager clientManager;
     private final ServerManager serverManager;
 
-    private String[] args;
+    private final String[] args;
 
     public AdminApp(String[] args) {
         clientManager = new ClientManager();
@@ -52,10 +53,7 @@ public class AdminApp {
             if (option == 0) {
                 serverManager.addServer(ServerConfig.FromCli());
             } else if (option == 1) {
-                // Add a new Client
-                String serverAddress = CliHelper.inputString("Enter serverAddress", 0, 0);
-                int serverPort = CliHelper.inputInt("Enter port", null, null);
-                clientManager.addClient(serverAddress, serverPort);
+                clientManager.addClient(ClientConfig.FromCli());
             } else if (option == 2) {
                 // List all the devices
                 list();
@@ -75,18 +73,9 @@ public class AdminApp {
                     ServerConfig serverConfig = ServerConfig.FromCompactArgs(arg);
                     serverManager.addServer(serverConfig);
                 }
-                else if (arg.startsWith(CLIENT_KEY)) {
-                    // Form : client=HOSTNAME:PORT
-                    String dataString = arg.substring(CLIENT_KEY.length());
-
-                    int separator = dataString.indexOf(':');
-                    if (separator == -1) {
-                        throw new IllegalArgumentException("Bad format for client argument arg=" + arg);
-                    }
-
-                    String serverHostname = dataString.substring(0, separator);
-                    int serverPort = Integer.parseInt(dataString.substring(separator + 1));
-                    clientManager.addClient(serverHostname, serverPort);
+                else if (arg.startsWith(ClientConfig.ARG_COMPACT_KEY)) {
+                    ClientConfig clientConfig = ClientConfig.FromCompactArgs(arg);
+                    clientManager.addClient(clientConfig);
                 }
             } catch (Exception e) {
                 Logger.error("Exception while parsing argument e=" + e.getMessage(), e);

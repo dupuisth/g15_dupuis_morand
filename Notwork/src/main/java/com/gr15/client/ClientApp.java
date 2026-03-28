@@ -11,11 +11,7 @@ import com.gr15.utils.ThreadUtils;
 import java.io.IOException;
 
 public class ClientApp {
-    public static final String HOSTNAME_KEY = "hostname=";
-    public static final String PORT_KEY = "port=";
-
-    private String serverHostname;
-    private int serverPort;
+    private ClientConfig config;
 
     private Connection connection;
 
@@ -23,58 +19,21 @@ public class ClientApp {
 
     private int clientId;
 
-    public ClientApp(String[] args) {
+    public ClientApp(ClientConfig config) {
+        this.config = config;
+        if (!config.validateConfiguration()) {
+            throw new IllegalArgumentException("Invalid ClientConfig: " + config);
+        }
+
         mainThread = Thread.currentThread();
-
-        serverHostname = null;
-        serverPort = -1;
-
-        for (String arg : args) {
-            if (arg.startsWith(HOSTNAME_KEY)) {
-                serverHostname = arg.substring(HOSTNAME_KEY.length());
-            } else if (arg.startsWith(PORT_KEY)) {
-                try {
-                    serverPort = Integer.parseInt(arg.substring(PORT_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            }
-        }
-
-        if (this.serverHostname == null) {
-            this.serverHostname = CliHelper.inputString("Enter the server hostname", 0, 0);
-        }
-
-        if (this.serverPort <= 0) {
-            this.serverPort = CliHelper.inputInt("Enter the server port", 2222, 8888);
-        }
 
         try {
             // Should never throw since we do not connect directly
-            this.connection = new Connection(this.serverHostname, this.serverPort, false);
+            this.connection = new Connection(config.getServerHostname(), config.getServerPort(), false);
         } catch (IOException e) {
             Logger.error("Exception while creating new connection", e);
             throw new IllegalStateException("Failed to create the connection");
         }
-    }
-
-    public ClientApp(String serverHostname, int serverPort) {
-        mainThread = Thread.currentThread();
-
-        this.serverHostname = serverHostname;
-        this.serverPort = serverPort;
-
-        try {
-            // Should never throw since we do not connect directly
-            this.connection = new Connection(this.serverHostname, this.serverPort, false);
-        } catch (IOException e) {
-            Logger.error("Exception while creating new connection", e);
-            throw new IllegalStateException("Failed to create the connection");
-        }
-    }
-
-    public Connection getConnection() {
-        return connection;
     }
 
     public void run() {
@@ -87,8 +46,8 @@ public class ClientApp {
                 Logger.error("Failed to connect", e);
             }
 
-            if (!ThreadUtils.safeSleep(1000)){
-                Thread.currentThread().interrupt();
+            if (!ThreadUtils.safeSleep(1000)) {
+                connection.close();
                 return;
             }
         }
@@ -196,8 +155,8 @@ public class ClientApp {
     @Override
     public String toString() {
         return "ClientApp{" +
-                "serverHostname='" + serverHostname + '\'' +
-                ", serverPort=" + serverPort +
+                "connection=" + connection +
+                ", clientId=" + clientId +
                 '}';
     }
 }
