@@ -33,13 +33,15 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     @Override
     public void pollEvents() {
-        synchronized (connectionsToRemoveQueue) {
-            synchronized (getConnectionsLock()) {
-                while (!connectionsToRemoveQueue.isEmpty()) {
-                    ClientConnection connectionToRemove = connectionsToRemoveQueue.poll();
-                    stopConnection(connectionToRemove);
-                }
+        while (true) {
+            ClientConnection connectionToRemove;
+            synchronized (connectionsToRemoveQueue) {
+                connectionToRemove = connectionsToRemoveQueue.poll();
             }
+            if (connectionToRemove == null) {
+                break;
+            }
+            stopConnection(connectionToRemove);
         }
 
         synchronized (messageReceivedQueue) {
@@ -129,7 +131,6 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             wrapper.getHandler().setShouldStop();
             wrapper.getHandler().interrupt();
 
-
             try {
                 wrapper.getListeningThread().join(1000);
             } catch (InterruptedException e) {
@@ -176,7 +177,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     @Override
     protected boolean onListeningError(ClientConnection remoteConnection, Exception e) {
         // This is called from the ListeningThread, so make sure this is running from the main thread
-        synchronized (getConnectionsLock()) {
+        synchronized (connectionsToRemoveQueue) {
             connectionsToRemoveQueue.add(remoteConnection);
         }
 
