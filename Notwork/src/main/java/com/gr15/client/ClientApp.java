@@ -21,6 +21,10 @@ public class ClientApp {
 
     public ClientApp(ClientConfig config) {
         this.config = config;
+        if (!config.validateConfiguration()) {
+            throw new IllegalArgumentException("Invalid ClientConfig: " + config);
+        }
+
         mainThread = Thread.currentThread();
 
         try {
