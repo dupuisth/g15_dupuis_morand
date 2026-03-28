@@ -120,7 +120,9 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
     protected K getWrapped(T connection) {
         synchronized (getConnectionsLock()) {
             for (K wrapped : getConnections()) {
-                if (wrapped.getConnection() == connection) return wrapped;
+                if (wrapped != null && wrapped.getConnection() != null && wrapped.getConnection() == connection) {
+                    return wrapped;
+                }
             }
         }
         return null;
