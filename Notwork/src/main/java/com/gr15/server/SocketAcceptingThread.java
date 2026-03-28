@@ -38,7 +38,7 @@ public class SocketAcceptingThread extends Thread {
                 Socket newSocket = serverSocket.accept();
                 // Callback
                 handler.handle(newSocket);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 Logger.error("Exception while accepting socket from serverSocket=" + serverSocket.getInetAddress(), e);
             }
         }
