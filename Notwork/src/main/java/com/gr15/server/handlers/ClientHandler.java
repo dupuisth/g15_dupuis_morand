@@ -38,11 +38,8 @@ public class ClientHandler extends Thread {
 
         // Send the "NEW_CLIENT" to everyone else
         Message newClientMessage = STC_MessageNewClient.CreateMessage(clientConnection.getClientId());
-        try {
-            server.getClientManager().sendToAll(newClientMessage, clientConnection);
-        } catch (IOException e) {
-            Logger.warn("Failed to send new client message e="+e.getMessage());
-        }
+        server.getClientManager().sendToAll(newClientMessage, clientConnection);
+
 
         // Do something later on, maybe implement the ping-pong stuff...
         while (!shouldStop && clientConnection.isConnected()) {

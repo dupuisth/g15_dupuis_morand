@@ -6,16 +6,15 @@ import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.CTS_Message;
 import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
-import com.gr15.common.message.STC_MessageRemoveClient;
 import com.gr15.server.ServerApp;
-import com.gr15.server.SocketAcceptingThread;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     /** Array of all the clients connected (index => localId) */
@@ -23,7 +22,9 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     private final Object connectionsLock = new Object();
 
-    private final ArrayList<ClientWrapper> clientsToRemove = new ArrayList<>();
+    private final Queue<ClientConnection> connectionsToRemoveQueue = new LinkedList<>();
+    private final Queue<MessageReceived> messageReceivedQueue = new LinkedList<>();
+    private final Queue<MessageToSend> messageToSendQueue = new LinkedList<>();
 
     public ClientManager(ServerApp server) {
         super(server);
@@ -31,13 +32,29 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
     @Override
     public void pollEvents() {
-        synchronized (clientsToRemove) {
+        synchronized (connectionsToRemoveQueue) {
             synchronized (getConnectionsLock()) {
-                for (ClientWrapper wrapper : clientsToRemove) {
-                    stopConnection(wrapper);
+                while (!connectionsToRemoveQueue.isEmpty()) {
+                    ClientConnection connectionToRemove = connectionsToRemoveQueue.poll();
+                    stopConnection(connectionToRemove);
                 }
             }
-            clientsToRemove.clear();
+        }
+
+        synchronized (messageReceivedQueue) {
+            while (!messageReceivedQueue.isEmpty()) {
+                MessageReceived received = messageReceivedQueue.poll();
+
+                // Handle the message
+                handleMessage(received.connection(), received.message());
+            }
+        }
+
+        synchronized (messageToSendQueue) {
+            while (!messageToSendQueue.isEmpty()) {
+                MessageToSend toSend = messageToSendQueue.poll();
+                toSend.connection.safeSend(toSend.message);
+            }
         }
     }
 
@@ -83,7 +100,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             }
 
             // Create and start the listening thread
-            ListeningThread<ClientConnection> listeningThread = createListeningThread(clientConnection);
+            ListeningThread<ClientConnection> listeningThread = createDefaultListeningThread(clientConnection);
             listeningThread.start();
 
             // Create and start the handler
@@ -99,29 +116,11 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     }
 
     @Override
-    protected void handleConnectionLoosed(ClientConnection client) {
-        try {
-            ClientWrapper wrapped = getWrapped(client);
-            if (wrapped == null) {
-                throw new RuntimeException("Could not get the wrapper for " + client);
-            }
-
-            stopConnection(wrapped);
-
-            // Notify clients
-            Message notifyMessage = STC_MessageRemoveClient.CreateMessage(client.getClientId());
-            sendToAll(notifyMessage); // No need to except, since the client is already removed
-        } catch (Exception e) {
-            Logger.error("Exception while handling client disconnection e=" + e.getMessage(), e);
-        }
-    }
-
-    @Override
-    protected void stopConnection(ClientWrapper wrapper) {
+    protected void stopConnection(ClientConnection connection) {
         synchronized (getConnectionsLock()) {
-            int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
+            ClientWrapper wrapper = getWrapped(connection);
 
-            Logger.debug("Stopping gracefully the wrapper " + wrapper);
+            int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
 
             wrapper.getConnection().close();
             wrapper.getListeningThread().setShouldStop();
@@ -144,11 +143,21 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             // Remove the connection
             getConnections()[localId] = null;
         }
-        Logger.info("Fully stopped connection to " + wrapper);
+        Logger.info("Fully stopped connection to " + connection);
     }
 
     @Override
-    protected void dispatchMessage(ClientConnection fromClient, int messageId, Message message) {
+    protected void onMessageRead(ClientConnection remoteConnection, Message message) {
+        Logger.info("Received a message from " + remoteConnection + ", length=" + message);
+
+        synchronized (messageReceivedQueue) {
+            MessageReceived received = new MessageReceived(remoteConnection, message);
+            messageReceivedQueue.add(received);
+        }
+    }
+
+    protected void handleMessage(ClientConnection fromClient, Message message) {
+        int messageId = message.readInt(Message.MESSAGE_ID_BITS);
         MessageCTS messageType = MessageCTS.fromId(messageId);
 
         // Handle each cases
@@ -167,11 +176,42 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     protected boolean onListeningError(ClientConnection remoteConnection, Exception e) {
         // This is called from the ListeningThread, so make sure this is running from the main thread
         synchronized (getConnectionsLock()) {
-            clientsToRemove.add(getWrapped(remoteConnection));
+            connectionsToRemoveQueue.add(remoteConnection);
         }
 
         // All exception are critical
         return true;
+    }
+
+    @Override
+    public void send(ClientConnection remoteConnection, Message message) {
+        synchronized (messageToSendQueue) {
+            messageToSendQueue.add(new MessageToSend(remoteConnection, message));
+        }
+    }
+
+    @Override
+    public void sendToAll(Message message) {
+        synchronized (messageToSendQueue) {
+            synchronized (getConnectionsLock()) {
+                for (ClientWrapper wrapper : connectionsToClient) {
+                    if (wrapper == null) continue;
+                    messageToSendQueue.add(new MessageToSend(wrapper.getConnection(), message));
+                }
+            }
+        }
+    }
+
+    @Override
+    public void sendToAll(Message message, ClientConnection except) {
+        synchronized (messageToSendQueue) {
+            synchronized (getConnectionsLock()) {
+                for (ClientWrapper wrapper : connectionsToClient) {
+                    if (wrapper == null || wrapper.getConnection() == null || wrapper.getConnection() == except) continue;
+                    messageToSendQueue.add(new MessageToSend(wrapper.getConnection(), message));
+                }
+            }
+        }
     }
 
     private void handleMessage(ClientConnection client, CTS_Message message) {
@@ -179,11 +219,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
         // Send to all clients except sender
         Message echoMessage = STC_Message.CreateMessage(client.getClientId(), message.getContent());
-        try {
-            sendToAll(echoMessage, client);
-        } catch (IOException e) {
-            Logger.warn("Failed to send ! e="+e.getMessage());
-        }
+        sendToAll(echoMessage, client);
     }
 
     private int getNextClientId() throws RuntimeException{
@@ -213,4 +249,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     public Object getConnectionsLock() {
         return connectionsLock;
     }
+
+    record MessageReceived(ClientConnection connection, Message message) {}
+    record MessageToSend(ClientConnection connection, Message message) {}
 }

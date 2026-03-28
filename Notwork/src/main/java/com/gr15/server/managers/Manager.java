@@ -1,7 +1,5 @@
 package com.gr15.server.managers;
 
-import com.gr15.client.Connection;
-import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.connections.RemoteConnection;
 import com.gr15.common.listening.ListeningThread;
@@ -21,16 +19,13 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
     /** Thread that accepts the socket automatically */
     private SocketAcceptingThread acceptingThread;
 
-    public abstract K[] getConnections();
-
-    public abstract Object getConnectionsLock();
-
-    public abstract int getPort();
-
     public Manager(ServerApp server) {
         this.server = server;
     }
 
+    /**
+     * Start the manager
+     */
     public void start() throws RuntimeException {
         // Prevent running the server two times
         if (serverSocket != null) {
@@ -51,6 +46,9 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
         acceptingThread.start();
     }
 
+    /**
+     * Stop the manager
+     */
     public void stop() {
         // Destroy the objects
         Logger.info("Cleaning up");
@@ -73,34 +71,51 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
         Logger.info("Cleanup done, exiting");
     }
 
+    /**
+     * Poll the events
+     */
     public abstract void pollEvents();
 
+    /**
+     * Called when a new socket is accepted
+     */
     protected abstract void handleNewSocket(Socket socket);
 
-    protected ListeningThread<T> createListeningThread(T remoteConnection) {
-        ListeningThread<T> listeningThread = new ListeningThread<>(
-                remoteConnection, this::onMessageReceived, this::onListeningError
-        );
-        return listeningThread;
-    }
+    /**
+     * Ensure the connection is stopped and clean it up
+     */
+    protected abstract void stopConnection(T remoteConnection);
 
-    protected abstract void handleConnectionLoosed(T remoteConnection);
+    /**
+     * Called when a message is read from a connection
+     */
+    protected abstract void onMessageRead(T remoteConnection, Message message);
 
-    protected abstract void stopConnection(K connection);
-
-    protected void onMessageReceived(T remoteConnection, Message message) {
-        Logger.debug("Received a message  ! from=" +  remoteConnection + " length=" + message.getWrittenByte());
-
-        // Read the message header
-        int messageId = message.readInt(Message.MESSAGE_ID_BITS);
-
-        dispatchMessage(remoteConnection, messageId, message);
-    }
-
-    protected abstract void dispatchMessage(T from, int messageId, Message message);
-
+    /**
+     * Called when a listening thread receive an exception
+     * @return true if the exception will close the connection
+     */
     protected abstract boolean onListeningError(T remoteConnection, Exception e);
 
+
+    /**
+     * Send a message to a connection (will queue)
+     */
+    public abstract void send(T remoteConnection, Message message);
+
+    /**
+     * Send a message to all connections (will queue)
+     */
+    public abstract void sendToAll(Message message);
+
+    /**
+     * Send a message to all the connection except the given one (will queue)
+     */
+    public abstract void sendToAll(Message message, T except);
+
+    /**
+     * Return the wrapper of the connection
+     */
     protected K getWrapped(T connection) {
         synchronized (getConnectionsLock()) {
             for (K wrapped : getConnections()) {
@@ -110,25 +125,19 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
         return null;
     }
 
-    public void send(T remoteConnection, Message message) throws IOException {
-        remoteConnection.send(message);
-    }
+    public abstract K[] getConnections();
 
-    public void sendToAll(Message message) throws IOException {
-        synchronized (getConnectionsLock()) {
-            for (ConnectionWrapper<T> remoteConnection : getConnections()) {
-                if (remoteConnection == null || remoteConnection.getConnection() == null) continue;
-                remoteConnection.getConnection().send(message);
-            }
-        }
-    }
+    public abstract Object getConnectionsLock();
 
-    public void sendToAll(Message message, T except) throws IOException {
-        synchronized (getConnectionsLock()) {
-            for (ConnectionWrapper<T> remoteConnection : getConnections()) {
-                if (remoteConnection == null || remoteConnection.getConnection() == null || remoteConnection.getConnection() == except) continue;
-                remoteConnection.getConnection().send(message);
-            }
-        }
+    public abstract int getPort();
+
+    /**
+     * Create a listening thread for the given communication, will have the default values
+     */
+    protected ListeningThread<T> createDefaultListeningThread(T remoteConnection) {
+        ListeningThread<T> listeningThread = new ListeningThread<>(
+                remoteConnection, this::onMessageRead, this::onListeningError
+        );
+        return listeningThread;
     }
 }

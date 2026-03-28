@@ -26,6 +26,8 @@ public class ServerApp {
 
     private final ClientManager clientManager;
 
+    public static final int POLL_SLEEP = 1000 / 5; // 5 refresh/s
+
 
     public ServerApp(ServerConfig initialConfig) {
         this.initialConfig = initialConfig;
@@ -50,7 +52,7 @@ public class ServerApp {
 
         // Keep alive
         while (!isStopping) {
-            ThreadUtils.safeSleep(16);
+            ThreadUtils.safeSleep(POLL_SLEEP);
 
             clientManager.pollEvents();
         }
