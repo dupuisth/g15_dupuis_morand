@@ -93,47 +93,49 @@ public class ServerApp {
         // Create a new connection
         ClientConnection clientConnection = null;
 
-        int nextClientId;
-        try {
-            nextClientId = getNextClientId();
-        } catch (RuntimeException e) {
-            Logger.error("Failed to create the client id", e);
-
-            // Close
+        synchronized (connectionsToClient) {
+            int nextClientId;
             try {
-                socket.close();
-            } catch (IOException ex) {
-                // Ignore
+                nextClientId = getNextClientId();
+            } catch (RuntimeException e) {
+                Logger.error("Failed to create the client id", e);
+
+                // Close
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    // Ignore
+                }
+
+                // Ignore this socket, we can't accept him
+                return;
             }
 
-            // Ignore this socket, we can't accept him
-            return;
-        }
-
-        try {
-            clientConnection = new ClientConnection(socket,  nextClientId);
-        } catch (IOException e) {
-            Logger.error("Failed to bind new client, disconnecting it", e);
             try {
-                socket.close();
-            } catch (IOException ex) {
-                Logger.error("Failed to close the connection", ex);
+                clientConnection = new ClientConnection(socket,  nextClientId);
+            } catch (IOException e) {
+                Logger.error("Failed to bind new client, disconnecting it", e);
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    Logger.error("Failed to close the connection", ex);
+                }
             }
-        }
 
-        if (clientConnection == null) {
-            // Error while binding the client, ignore him
-            return;
-        }
+            if (clientConnection == null) {
+                // Error while binding the client, ignore him
+                return;
+            }
 
-        // Add it to the clients list
-        connectionsToClient[ClientId.GetLocalId(nextClientId)] = clientConnection;
+            // Add it to the clients list
+            connectionsToClient[ClientId.GetLocalId(nextClientId)] = clientConnection;
+        }
 
         // Start the handler
         ClientHandler clientHandler = new ClientHandler(clientConnection, this);
         clientHandler.start();
 
-        Logger.info("Created new client, c=" + ClientId.toString(nextClientId));
+        Logger.info("Created new client, c=" + ClientId.toString(clientConnection.getClientId()));
     }
 
     public void onClientDisconnected(ClientConnection client) {
