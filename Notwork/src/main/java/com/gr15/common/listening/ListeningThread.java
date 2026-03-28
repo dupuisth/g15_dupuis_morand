@@ -29,7 +29,9 @@ public class ListeningThread<T extends RemoteConnection> extends Thread {
             } catch (Exception e) {
                 Logger.error("Exception while trying to read message", e);
                 // Delegate the exception
-                exceptionHandler.handleException(remoteConnection, e);
+                if (exceptionHandler.handleException(remoteConnection, e)) {
+                    break;
+                }
             }
         }
 

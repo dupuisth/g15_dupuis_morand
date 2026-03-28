@@ -12,36 +12,34 @@ import com.gr15.server.SocketAcceptingThread;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
-import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class ClientManager extends Manager<ClientConnection> {
-
-    /** Socket used for the clients */
-    private ServerSocket serverSocket;
+public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     /** Array of all the clients connected (index => localId) */
-    private final ClientConnection[] connectionsToClient = new ClientConnection[ClientId.MAX_CLIENTS];
-    /** Thread that accepts the socket automatically */
-    private SocketAcceptingThread acceptingThread;
+    private final ClientWrapper[] connectionsToClient = new ClientWrapper[ClientId.MAX_CLIENTS];
 
-    @Override
-    public ClientConnection[] getConnections() {
-        return connectionsToClient;
-    }
+    private final Object connectionsLock = new Object();
 
-    @Override
-    public int getPort() {
-        return server.getInitialConfig().getClientSocketPort();
-    }
+    private final ArrayList<ClientWrapper> clientsToRemove = new ArrayList<>();
 
     public ClientManager(ServerApp server) {
         super(server);
     }
 
+    @Override
+    public void pollEvents() {
+        synchronized (clientsToRemove) {
+            synchronized (getConnectionsLock()) {
+                for (ClientWrapper wrapper : clientsToRemove) {
+                    stopConnection(wrapper);
+                }
+            }
+            clientsToRemove.clear();
+        }
+    }
 
     @Override
     protected void handleNewSocket(Socket socket) {
@@ -50,7 +48,7 @@ public class ClientManager extends Manager<ClientConnection> {
         // Create a new connection
         ClientConnection clientConnection = null;
 
-        synchronized (connectionsToClient) {
+        synchronized (getConnectionsLock()) {
             int nextClientId;
             try {
                 nextClientId = getNextClientId();
@@ -84,48 +82,69 @@ public class ClientManager extends Manager<ClientConnection> {
                 return;
             }
 
-            // Add it to the clients list
-            connectionsToClient[ClientId.GetLocalId(nextClientId)] = clientConnection;
-            createListeningThread(clientConnection);
-        }
+            // Create and start the listening thread
+            ListeningThread<ClientConnection> listeningThread = createListeningThread(clientConnection);
+            listeningThread.start();
 
-        // Start the handler
-        ClientHandler clientHandler = new ClientHandler(clientConnection, server);
-        clientHandler.start();
+            // Create and start the handler
+            ClientHandler clientHandler = new ClientHandler(clientConnection, server);
+            clientHandler.start();
+
+            // Add it to the clients list
+            ClientWrapper wrapper = new ClientWrapper(clientConnection, listeningThread, clientHandler);
+            connectionsToClient[ClientId.GetLocalId(nextClientId)] = wrapper;
+        }
 
         Logger.info("Created new client, c=" + ClientId.toString(clientConnection.getClientId()));
     }
 
     @Override
     protected void handleConnectionLoosed(ClientConnection client) {
-        // Remove the client from the list, and notify clients
-
         try {
-            try {
-                // Force to close the socket (in case not already done)
-                client.close();
-            } catch (Exception ignored) {
-
+            ClientWrapper wrapped = getWrapped(client);
+            if (wrapped == null) {
+                throw new RuntimeException("Could not get the wrapper for " + client);
             }
 
-            int localId = ClientId.GetLocalId(client.getClientId());
-            if (localId < 0 || localId >= ClientId.MAX_CLIENTS) {
-                // The id is not valid, something is wrong
-                throw new RuntimeException("The given clientId is not valid, something is wrong clientId=" + ClientId.toString(client.getClientId()));
-            }
+            stopConnection(wrapped);
 
-            // Remove it
-            synchronized (connectionsToClient) {
-                connectionsToClient[localId] = null;
-            }
             // Notify clients
             Message notifyMessage = STC_MessageRemoveClient.CreateMessage(client.getClientId());
             sendToAll(notifyMessage); // No need to except, since the client is already removed
         } catch (Exception e) {
             Logger.error("Exception while handling client disconnection e=" + e.getMessage(), e);
         }
+    }
 
-        Logger.info("Removed client c=" + client);
+    @Override
+    protected void stopConnection(ClientWrapper wrapper) {
+        synchronized (getConnectionsLock()) {
+            int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
+
+            Logger.debug("Stopping gracefully the wrapper " + wrapper);
+
+            wrapper.getConnection().close();
+            wrapper.getListeningThread().setShouldStop();
+            wrapper.getListeningThread().interrupt();
+            wrapper.getHandler().setShouldStop();
+            wrapper.getHandler().interrupt();
+
+
+            try {
+                wrapper.getListeningThread().join(1000);
+            } catch (InterruptedException e) {
+                Logger.error("", e);
+            }
+            try {
+                wrapper.getHandler().join(1000);
+            } catch (InterruptedException e) {
+                Logger.error("", e);
+            }
+
+            // Remove the connection
+            getConnections()[localId] = null;
+        }
+        Logger.info("Fully stopped connection to " + wrapper);
     }
 
     @Override
@@ -145,12 +164,17 @@ public class ClientManager extends Manager<ClientConnection> {
     }
 
     @Override
-    protected void onListeningError(ClientConnection remoteConnection, Exception e) {
-        // Nothing special to do...
-        handleConnectionLoosed(remoteConnection);
+    protected boolean onListeningError(ClientConnection remoteConnection, Exception e) {
+        // This is called from the ListeningThread, so make sure this is running from the main thread
+        synchronized (getConnectionsLock()) {
+            clientsToRemove.add(getWrapped(remoteConnection));
+        }
+
+        // All exception are critical
+        return true;
     }
 
-    public void handleMessage(ClientConnection client, CTS_Message message) {
+    private void handleMessage(ClientConnection client, CTS_Message message) {
         Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 
         // Send to all clients except sender
@@ -162,9 +186,8 @@ public class ClientManager extends Manager<ClientConnection> {
         }
     }
 
-
-    public int getNextClientId() throws RuntimeException{
-        synchronized (connectionsToClient)
+    private int getNextClientId() throws RuntimeException{
+        synchronized (getConnectionsLock())
         {
             for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
                 if (connectionsToClient[i] == null) {
@@ -174,5 +197,20 @@ public class ClientManager extends Manager<ClientConnection> {
         }
 
         throw new RuntimeException("No more space in the network !");
+    }
+
+    @Override
+    public int getPort() {
+        return server.getInitialConfig().getClientSocketPort();
+    }
+
+    @Override
+    public ClientWrapper[] getConnections() {
+        return connectionsToClient;
+    }
+
+    @Override
+    public Object getConnectionsLock() {
+        return connectionsLock;
     }
 }

@@ -17,6 +17,8 @@ public class ClientHandler extends Thread {
     private final ClientConnection clientConnection;
     private final ServerApp server;
 
+    private volatile boolean shouldStop = false;
+
     public ClientHandler(ClientConnection clientConnection, ServerApp server) {
         this.clientConnection = clientConnection;
         this.server = server;
@@ -43,10 +45,16 @@ public class ClientHandler extends Thread {
         }
 
         // Do something later on, maybe implement the ping-pong stuff...
-        while (clientConnection.isConnected()) {
+        while (!shouldStop && clientConnection.isConnected()) {
             if (!ThreadUtils.safeSleep(1000)) {
                 break;
             }
         }
+
+        Logger.info("Stopped Client handler");
+    }
+
+    public void setShouldStop() {
+        shouldStop = true;
     }
 }

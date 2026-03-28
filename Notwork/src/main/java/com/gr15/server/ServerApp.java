@@ -50,7 +50,9 @@ public class ServerApp {
 
         // Keep alive
         while (!isStopping) {
-            ThreadUtils.safeSleep(1000);
+            ThreadUtils.safeSleep(16);
+
+            clientManager.pollEvents();
         }
 
         clientManager.stop();

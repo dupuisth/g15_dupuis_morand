@@ -124,7 +124,7 @@ public class ClientApp {
         connection.close();
     }
 
-    public void onCriticalListeningError(Connection connection, Exception e) {
+    public boolean onCriticalListeningError(Connection connection, Exception e) {
         Logger.error("Critical error, closing the socket", e);
 
         // Stop the socket
@@ -132,6 +132,8 @@ public class ClientApp {
 
         // Interrupt the main thread (this will not interrupt the scanner)
         mainThread.interrupt();
+
+        return true;
     }
 
     public void onMessageReceived(Connection connection, Message message) {
