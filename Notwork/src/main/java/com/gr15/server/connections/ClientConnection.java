@@ -1,5 +1,6 @@
 package com.gr15.server.connections;
 
+import com.gr15.common.ClientId;
 import com.gr15.common.connections.RemoteConnection;
 
 import java.io.IOException;
@@ -18,5 +19,12 @@ public class ClientConnection extends RemoteConnection {
 
     public int getClientId() {
         return clientId;
+    }
+
+    @Override
+    public String toString() {
+        return "ClientConnection{" +
+                "clientId=" + ClientId.toString(clientId) +
+                '}';
     }
 }
