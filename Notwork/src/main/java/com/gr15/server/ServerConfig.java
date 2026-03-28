@@ -85,14 +85,10 @@ public class ServerConfig {
         ServerConfig config = new ServerConfig();
         try {
             config.setServerId(Integer.parseInt(dataString.substring(0, separator)));
-        } catch (NumberFormatException e) {
-            // ok
-        }
-
-        try {
             config.setClientSocketPort(Integer.parseInt(dataString.substring(separator + 1)));
+
         } catch (NumberFormatException e) {
-            // ok
+            throw new IllegalArgumentException("Invalid format for server argument arg=" + arg);
         }
         return config;
     }

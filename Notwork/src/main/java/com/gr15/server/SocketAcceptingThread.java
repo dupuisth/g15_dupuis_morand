@@ -32,7 +32,7 @@ public class SocketAcceptingThread extends Thread {
 
     @Override
     public void run() {
-        while (!serverSocket.isClosed() && serverSocket.isBound()) {
+        while (!shouldStop && !serverSocket.isClosed() && serverSocket.isBound()) {
             try {
                 // Accept the new socket
                 Socket newSocket = serverSocket.accept();
