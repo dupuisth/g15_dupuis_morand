@@ -113,7 +113,9 @@ public class ClientApp {
         }
         Logger.info("Stopping everything");
 
+
         listenThread.setShouldStop();
+        connection.close();
         listenThread.interrupt();
         try {
             listenThread.join(500);
@@ -121,7 +123,6 @@ public class ClientApp {
             Logger.error("Exception while joining listening thread", e);
         }
 
-        connection.close();
     }
 
     public boolean onCriticalListeningError(Connection connection, Exception e) {
