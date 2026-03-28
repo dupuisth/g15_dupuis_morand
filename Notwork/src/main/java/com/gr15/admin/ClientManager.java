@@ -2,6 +2,7 @@ package com.gr15.admin;
 
 import com.gr15.Application;
 import com.gr15.client.ClientApp;
+import com.gr15.client.ClientConfig;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ProcessUtils;
 
@@ -16,17 +17,10 @@ public class ClientManager {
         clients = new ArrayList<>();
     }
 
-    public void addClient(String hostname, int port) {
+    public void addClient(ClientConfig clientConfig) {
         ArrayList<String> arguments = new ArrayList<>();
         arguments.add(Application.CLIENT_KEY);
-
-        if (hostname != null) {
-            arguments.add(ClientApp.HOSTNAME_KEY + hostname);
-        }
-
-        if (port >= 0) {
-            arguments.add(ClientApp.PORT_KEY + port);
-        }
+        arguments.addAll(clientConfig.toArgs());
 
         try {
             Process process = ProcessUtils.startApplicationInNewTerminal(arguments);

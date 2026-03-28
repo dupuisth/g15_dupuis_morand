@@ -3,9 +3,7 @@ package com.gr15.server.managers;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
-import com.gr15.common.message.CTS_Message;
-import com.gr15.common.message.MessageCTS;
-import com.gr15.common.message.STC_Message;
+import com.gr15.common.message.*;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.connections.ClientWrapper;
@@ -153,6 +151,9 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             getConnections()[localId] = null;
         }
         Logger.info("Fully stopped connection to " + connection);
+
+        // Notify the clients
+        sendToAll(STC_MessageRemoveClient.CreateMessage(connection.getClientId()));
     }
 
     @Override

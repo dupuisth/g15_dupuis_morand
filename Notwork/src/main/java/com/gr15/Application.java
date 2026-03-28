@@ -4,6 +4,7 @@ package com.gr15;
 import com.gr15.admin.AdminApp;
 import com.gr15.cli.CliHelper;
 import com.gr15.client.ClientApp;
+import com.gr15.client.ClientConfig;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 
@@ -14,7 +15,6 @@ public class Application {
     public static final String ADMIN_KEY = "admin";
     public static final String SERVER_KEY = "server";
     public static final String CLIENT_KEY = "client";
-    public static final String Logger_KEY = "Logger";
 
     static ApplicationType selectApplicationType() {
         List<String> choices = new ArrayList<>();
@@ -65,7 +65,8 @@ public class Application {
             }
 
             case Client -> {
-                ClientApp app = new ClientApp(args);
+                ClientConfig config = ClientConfig.FromArgs(args);
+                ClientApp app = new ClientApp(config);
                 app.run();
             }
         }
