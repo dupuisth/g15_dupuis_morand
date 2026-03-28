@@ -1,6 +1,5 @@
 package com.gr15.server;
 
-import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.message.CTS_Message;
@@ -8,60 +7,38 @@ import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
 import com.gr15.common.message.STC_MessageRemoveClient;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-
+/**
+ * Application to run for the server
+ */
 public class ServerApp {
-    public static final String SERVER_ID_KEY = "serverId=";
-    public static final String SERVER_PORT_KEY = "port=";
+    private volatile boolean isStopping = false;
 
-    private boolean isStopping = false;
-    private int port;
-    private int serverId;
+    private final ServerConfig initialConfig;
 
+    /** Socket used for the clients */
     private ServerSocket serverSocket;
-    private final ConnectionToClient[] connectionsToClient = new ConnectionToClient[ClientId.MAX_CLIENTS];
+    /** Array of all the clients connected (index => localId) */
+    private final ClientConnection[] connectionsToClient = new ClientConnection[ClientId.MAX_CLIENTS];
 
-    public ServerApp(String[] args) {
-        // Default to bad values
-        port = -1;
-        serverId = -1;
+    public ServerApp(ServerConfig initialConfig) {
+        this.initialConfig = initialConfig;
 
-        for (String arg : args) {
-            if (arg.startsWith(SERVER_ID_KEY)) {
-                try {
-                    serverId = Integer.parseInt(arg.substring(SERVER_ID_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            } else if (arg.startsWith(SERVER_PORT_KEY)) {
-                try {
-                    port = Integer.parseInt(arg.substring(SERVER_PORT_KEY.length()));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            }
+        if (!initialConfig.validateConfiguration()) {
+            Logger.error("Invalid configuration config=" + initialConfig);
+            throw new IllegalArgumentException("Invalid configuration");
         }
-
-        if (this.serverId < 0) {
-            this.serverId = CliHelper.inputInt("Enter the server ID", 0, 32);
-        }
-        if (this.port <= 0) {
-            this.port = CliHelper.inputInt("Enter the server port", 2222, 8888);
-        }
-    }
-
-    public ServerApp(int serverId, int port) {
-        this.serverId = serverId;
-        this.port = port;
     }
 
     public void run() {
         Logger.info("Started new ServerApp");
 
+        // Prevent running the server two times
         if (serverSocket != null) {
             Logger.warn("Server already started");
             return;
@@ -69,33 +46,59 @@ public class ServerApp {
 
         // Start the server socket
         try {
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket(initialConfig.getClientSocketPort());
         } catch (IOException e) {
-            Logger.error("Failed to create the server socket e=" + e.getMessage() , e);
+            Logger.error("Failed to create the server socket", e);
             return;
         }
 
+        // Start the server accepting thread
+        SocketAcceptingThread serverSocketAcceptingThread = new SocketAcceptingThread(serverSocket, this::handleNewClientSocket);
+        serverSocketAcceptingThread.start();
+
+        // Keep alive
         while (!isStopping) {
-            Socket socket;
+            ThreadUtils.safeSleep(1000);
+        }
+
+        // Destroy the objects
+        Logger.info("Cleaning up");
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocketAcceptingThread.setShouldStop();
+            serverSocketAcceptingThread.interrupt();
+
             try {
-                // Block until a client open a connection
-                socket = serverSocket.accept();
-            } catch (IOException e) {
-                Logger.error("Failed to accept socket: " + e.getMessage(), e);
-                // Block again
-                continue;
+                serverSocketAcceptingThread.join(1000);
+            } catch (InterruptedException e) {
+                Logger.error("Exception while trying waiting for serverSocketAcceptingThread ending", e);
             }
 
-            Logger.info("New client inet=" + socket.getInetAddress() + " port=" + socket.getPort());
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                Logger.error("Error while closing socket: " + e.getMessage(), e);
+            }
+        }
+        Logger.info("Cleanup done, exiting");
+    }
 
-            // Create a new connection
-            ConnectionToClient connectionToClient = null;
+    public void stop() {
+        Logger.debug("Stop received");
+        isStopping = true;
+    }
 
+    private void handleNewClientSocket(Socket socket) {
+        Logger.info("New client socket inet=" + socket.getInetAddress() + ":" + socket.getPort());
+
+        // Create a new connection
+        ClientConnection clientConnection = null;
+
+        synchronized (connectionsToClient) {
             int nextClientId;
             try {
                 nextClientId = getNextClientId();
             } catch (RuntimeException e) {
-                Logger.error("Failed to create the client id, e=" + e.getMessage(), e);
+                Logger.error("Failed to create the client id", e);
 
                 // Close
                 try {
@@ -105,14 +108,13 @@ public class ServerApp {
                 }
 
                 // Ignore this socket, we can't accept him
-                continue;
+                return;
             }
 
             try {
-                connectionToClient = new ConnectionToClient(socket,  nextClientId);
+                clientConnection = new ClientConnection(socket,  nextClientId);
             } catch (IOException e) {
                 Logger.error("Failed to bind new client, disconnecting it", e);
-
                 try {
                     socket.close();
                 } catch (IOException ex) {
@@ -120,36 +122,23 @@ public class ServerApp {
                 }
             }
 
-            if (connectionToClient == null) {
+            if (clientConnection == null) {
                 // Error while binding the client, ignore him
-                continue;
+                return;
             }
 
             // Add it to the clients list
-            connectionsToClient[ClientId.GetLocalId(nextClientId)] = connectionToClient;
-
-            // Start the handler
-            ClientHandler clientHandler = new ClientHandler(connectionToClient, this);
-            clientHandler.start();
-
-            Logger.info("Created new client, id="+nextClientId + " localId=" + ClientId.GetLocalId(nextClientId));
+            connectionsToClient[ClientId.GetLocalId(nextClientId)] = clientConnection;
         }
 
-        // Destroy the objects
-        if (serverSocket != null && !serverSocket.isClosed()) {
-            try {
-                serverSocket.close();
-            } catch (IOException e) {
-                Logger.error("Error while closing socket: " + e.getMessage(), e);
-            }
-        }
+        // Start the handler
+        ClientHandler clientHandler = new ClientHandler(clientConnection, this);
+        clientHandler.start();
+
+        Logger.info("Created new client, c=" + ClientId.toString(clientConnection.getClientId()));
     }
 
-    public void stop() {
-        isStopping = true;
-    }
-
-    public void onClientDisconnected(ConnectionToClient client) {
+    public void onClientDisconnected(ClientConnection client) {
         // Remove the client from the list, and notify clients
 
         try {
@@ -172,9 +161,9 @@ public class ServerApp {
     }
 
     /**
-     * When a message is received
+     * When a message is received from a client
      */
-    public void onMessageReceived(ConnectionToClient client, Message message) {
+    public void onMessageReceived(ClientConnection client, Message message) {
         Logger.debug("Received a message (CTS) ! from=" + ClientId.toString(client.getClientId())  + " / " + client.getSocket().getInetAddress() + ":" + client.getSocket().getPort()  + " length=" + message.getWrittenByte());
 
         // Read the message header
@@ -193,7 +182,10 @@ public class ServerApp {
         }
     }
 
-    public void handleMessage(ConnectionToClient client, CTS_Message message) {
+    /**
+     * Handle a message from a client
+     */
+    public void handleMessage(ClientConnection client, CTS_Message message) {
         Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 
         // Send to all clients except sender
@@ -205,22 +197,22 @@ public class ServerApp {
         }
     }
 
-    public void sendToClient(ConnectionToClient client, Message message) throws IOException {
+    public void sendToClient(ClientConnection client, Message message) throws IOException {
         client.send(message);
     }
 
     public void sendToClients(Message message) throws IOException {
         synchronized (connectionsToClient) {
-            for (ConnectionToClient client : connectionsToClient) {
+            for (ClientConnection client : connectionsToClient) {
                 if (client == null) continue;
                 client.send(message);
             }
         }
     }
 
-    public void sendToClients(Message message, ConnectionToClient except) throws IOException {
+    public void sendToClients(Message message, ClientConnection except) throws IOException {
         synchronized (connectionsToClient) {
-            for (ConnectionToClient client : connectionsToClient) {
+            for (ClientConnection client : connectionsToClient) {
                 if (client == null || client == except) continue;
                 client.send(message);
             }
@@ -232,31 +224,11 @@ public class ServerApp {
         {
             for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
                 if (connectionsToClient[i] == null) {
-                    return ClientId.Create(serverId, i);
+                    return ClientId.Create(initialConfig.getServerId(), i);
                 }
             }
         }
 
         throw new RuntimeException("No more space in the network !");
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public int getServerId() {
-        return serverId;
-    }
-
-    public ConnectionToClient[] getConnectionsToClient() {
-        return connectionsToClient;
-    }
-
-    @Override
-    public String toString() {
-        return "ServerApp{" +
-                "port=" + port +
-                ", serverId=" + serverId +
-                '}';
     }
 }

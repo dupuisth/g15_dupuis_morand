@@ -8,6 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 // Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
 
@@ -221,41 +222,5 @@ public class Message {
 
     public int getWrittenByte() {
         return Math.ceilDiv(writtenBit, Converter.BITS_PER_BYTE);
-    }
-
-    /**
-     * Read a message on a given input stream
-     */
-    public static Message readMessageFromSocket(DataInputStream in) throws Exception {
-        // Read the length
-        int length = in.readInt();
-
-        // Read the message
-        byte[] messageBytes = new byte[length];
-        in.readFully(messageBytes);
-
-        Message message = new Message(messageBytes);
-        Logger.debug("Received a message length=" + length);
-
-        // Build the message from the bytes
-        return message;
-    }
-
-    /**
-     * Send a message on a given output stream
-     */
-    public static void sendMessageToSocket(DataOutputStream out, Message message) throws IOException {
-        // Get the total bytes written (this might send 1 to 3 more bits, since the unitary format is byte)
-        int length = message.getWrittenByte();
-        // Send the total length
-        out.writeInt(length);
-
-        // Then send all the data (but crop just to what was written)
-        out.write(message.getData(), 0, length);
-
-        // And assure the message is fully sent
-        out.flush();
-
-        Logger.debug("Sent a message length=" + length);
     }
 }

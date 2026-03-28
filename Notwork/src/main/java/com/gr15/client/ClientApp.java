@@ -3,8 +3,10 @@ package com.gr15.client;
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
+import com.gr15.common.RemoteConnection;
 import com.gr15.common.message.*;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 
@@ -14,12 +16,17 @@ public class ClientApp {
 
     private String serverHostname;
     private int serverPort;
+
     private Connection connection;
     private ListeningThread listeningThread;
+
+    private final Thread mainThread;
 
     private int clientId;
 
     public ClientApp(String[] args) {
+        mainThread = Thread.currentThread();
+
         serverHostname = null;
         serverPort = -1;
 
@@ -43,13 +50,28 @@ public class ClientApp {
             this.serverPort = CliHelper.inputInt("Enter the server port", 2222, 8888);
         }
 
-        this.connection = new Connection(this.serverHostname, this.serverPort);
+        try {
+            // Should never throw since we do not connect directly
+            this.connection = new Connection(this.serverHostname, this.serverPort, false);
+        } catch (IOException e) {
+            Logger.error("Exception while creating new connection", e);
+            throw new IllegalStateException("Failed to create the connection");
+        }
     }
 
     public ClientApp(String serverHostname, int serverPort) {
+        mainThread = Thread.currentThread();
+
         this.serverHostname = serverHostname;
         this.serverPort = serverPort;
-        this.connection = new Connection(this.serverHostname, this.serverPort);
+
+        try {
+            // Should never throw since we do not connect directly
+            this.connection = new Connection(this.serverHostname, this.serverPort, false);
+        } catch (IOException e) {
+            Logger.error("Exception while creating new connection", e);
+            throw new IllegalStateException("Failed to create the connection");
+        }
     }
 
     public Connection getConnection() {
@@ -60,31 +82,47 @@ public class ClientApp {
         Logger.info("Started new ClientApp");
 
         while (!connection.isConnected()) {
-            connection.start();
-
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
+                connection.connect();
+            } catch (IOException e) {
+                Logger.error("Failed to connect", e);
+            }
+
+            if (!ThreadUtils.safeSleep(1000)){
+                Thread.currentThread().interrupt();
                 return;
             }
         }
 
         // Open the listening thread
-        listeningThread = new ListeningThread(this);
+        listeningThread = new ListeningThread(this, connection);
         listeningThread.start();
 
         // Prompt for a message
         while (connection.isConnected()) {
             // Take the client input
 
+            // THIS WILL BLOCK UNTIL THE USER PRESS ENTER, SO, IF A DISCONNECTION HAPPEN
+            // THE USER WILL NOT BE NOTIFIED UNTIL THIS END
+            // todo: FIX THIS LATER
             String input = CliHelper.inputString(null, 0, 0);
             Message message = CTS_Message.CreateMessage(input);
             try {
-                Message.sendMessageToSocket(connection.getOut(), message);
+                connection.send(message);
             } catch (IOException e) {
                 Logger.warn("Failed to send message to server e=" + e.getMessage());
             }
         }
+    }
+
+    public void onCriticalListeningError(Exception e) {
+        Logger.error("Critical error, closing the socket", e);
+
+        // Stop the socket
+        connection.close();
+
+        // Interrupt the main thread (this will not interrupt the scanner)
+        mainThread.interrupt();
     }
 
     public void onMessageReceived(Message message) {
@@ -142,7 +180,6 @@ public class ClientApp {
 
         CliHelper.show("[Server][RemoveClient]: clientId=" + message.getClientId());
     }
-
 
     @Override
     public String toString() {

@@ -1,13 +1,13 @@
 package com.gr15.admin;
 
 import com.gr15.cli.CliHelper;
+import com.gr15.server.ServerConfig;
 import com.gr15.utils.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AdminApp {
-    public static final String SERVER_KEY = "server=";
     public static final String CLIENT_KEY = "client=";
 
     private final ClientManager clientManager;
@@ -50,10 +50,7 @@ public class AdminApp {
             int option = CliHelper.selectChoices("", choices);
 
             if (option == 0) {
-                // Add a new Server
-                int serverId = CliHelper.inputInt("Enter serverId", 0, 20);
-                int port = CliHelper.inputInt("Enter port", 2222, 8888);
-                serverManager.addServer(serverId, port);
+                serverManager.addServer(ServerConfig.FromCli());
             } else if (option == 1) {
                 // Add a new Client
                 String serverAddress = CliHelper.inputString("Enter serverAddress", 0, 0);
@@ -74,18 +71,9 @@ public class AdminApp {
         // If there were argument to create server / clients, handle them
         for (String arg : args) {
             try {
-                if (arg.startsWith(SERVER_KEY)) {
-                    // Form : server=ID:PORT
-                    String dataString = arg.substring(SERVER_KEY.length());
-
-                    int separator = dataString.indexOf(':');
-                    if (separator == -1) {
-                        throw new IllegalArgumentException("Bad format for server argument arg=" + arg);
-                    }
-
-                    int serverId = Integer.parseInt(dataString.substring(0, separator));
-                    int serverPort = Integer.parseInt(dataString.substring(separator + 1));
-                    serverManager.addServer(serverId, serverPort);
+                if (arg.startsWith(ServerConfig.ARG_COMPACT_KEY)) {
+                    ServerConfig serverConfig = ServerConfig.FromCompactArgs(arg);
+                    serverManager.addServer(serverConfig);
                 }
                 else if (arg.startsWith(CLIENT_KEY)) {
                     // Form : client=HOSTNAME:PORT

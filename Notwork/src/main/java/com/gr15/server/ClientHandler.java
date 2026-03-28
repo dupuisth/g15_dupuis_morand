@@ -8,12 +8,15 @@ import com.gr15.utils.Logger;
 import java.io.EOFException;
 import java.io.IOException;
 
+/**
+ * Thread created when a client connects to the server, listen for message from the client
+ */
 public class ClientHandler extends Thread {
-    private final ConnectionToClient connectionToClient;
+    private final ClientConnection clientConnection;
     private final ServerApp server;
 
-    public ClientHandler(ConnectionToClient connectionToClient, ServerApp server) {
-        this.connectionToClient = connectionToClient;
+    public ClientHandler(ClientConnection clientConnection, ServerApp server) {
+        this.clientConnection = clientConnection;
         this.server = server;
     }
 
@@ -22,38 +25,31 @@ public class ClientHandler extends Thread {
         super.run();
 
         // Send a welcome to the client
-        Message welcomeMessage = STC_MessageHello.CreateMessage(connectionToClient.getClientId(), "Coucou !");
+        Message welcomeMessage = STC_MessageHello.CreateMessage(clientConnection.getClientId(), "Coucou !");
         try {
-            connectionToClient.send(welcomeMessage);
+            clientConnection.send(welcomeMessage);
         } catch (IOException e) {
             Logger.warn("Failed to send welcome message e="+e.getMessage());
         }
 
         // Send the "NEW_CLIENT" to everyone else
-        Message newClientMessage = STC_MessageNewClient.CreateMessage(connectionToClient.getClientId());
+        Message newClientMessage = STC_MessageNewClient.CreateMessage(clientConnection.getClientId());
         try {
-            server.sendToClients(newClientMessage, connectionToClient);
+            server.sendToClients(newClientMessage, clientConnection);
         } catch (IOException e) {
             Logger.warn("Failed to send new client message e="+e.getMessage());
         }
 
-        while (connectionToClient.isConnected()) {
+        while (clientConnection.isConnected()) {
             // Read
             try {
-                Message readMessage = Message.readMessageFromSocket(connectionToClient.getIn());
-                server.onMessageReceived(connectionToClient, readMessage);
-            } catch (EOFException e) {
-                // EOF is thrown when the socket is closed
-                Logger.warn("Received a EOF when try to read from c=" + connectionToClient.getClientId() + ", closing the connection");
-                connectionToClient.close();
-                server.onClientDisconnected(connectionToClient);
-            }   catch (Exception e) {
+                Message readMessage = clientConnection.read();
+                server.onMessageReceived(clientConnection, readMessage);
+            } catch (Exception e) {
                 Logger.warn("Failed to read message e=" + e.getMessage());
+                clientConnection.close();
+                server.onClientDisconnected(clientConnection);
             }
         }
-    }
-
-    public ConnectionToClient getConnectionToClient() {
-        return connectionToClient;
     }
 }
