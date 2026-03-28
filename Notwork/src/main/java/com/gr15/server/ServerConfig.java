@@ -82,10 +82,19 @@ public class ServerConfig {
             throw new IllegalArgumentException("Bad format for server argument arg=" + arg);
         }
 
-        // Compact form, might handle this later on in ServerConfig but for now it's ok
-        int serverId = Integer.parseInt(dataString.substring(0, separator));
-        int clientSocketPort = Integer.parseInt(dataString.substring(separator + 1));
-        return new ServerConfig(serverId, clientSocketPort);
+        ServerConfig config = new ServerConfig();
+        try {
+            config.setServerId(Integer.parseInt(dataString.substring(0, separator)));
+        } catch (NumberFormatException e) {
+            // ok
+        }
+
+        try {
+            config.setClientSocketPort(Integer.parseInt(dataString.substring(separator + 1)));
+        } catch (NumberFormatException e) {
+            // ok
+        }
+        return config;
     }
 
     public ArrayList<String> toArgs() {
