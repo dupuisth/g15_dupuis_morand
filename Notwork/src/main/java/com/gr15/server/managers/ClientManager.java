@@ -122,6 +122,10 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     protected void stopConnection(ClientConnection connection) {
         synchronized (getConnectionsLock()) {
             ClientWrapper wrapper = getWrapped(connection);
+            if (wrapper == null) {
+                Logger.warn("Connection already removed: " + connection);
+                return;
+            }
 
             int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
 
@@ -134,12 +138,15 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             try {
                 wrapper.getListeningThread().join(1000);
             } catch (InterruptedException e) {
-                Logger.error("", e);
+                Logger.error("Interrupted while joining listening thread", e);
+                Thread.currentThread().interrupt();
             }
+
             try {
                 wrapper.getHandler().join(1000);
             } catch (InterruptedException e) {
-                Logger.error("", e);
+                Logger.error("Interrupted while joining handler thread", e);
+                Thread.currentThread().interrupt();
             }
 
             // Remove the connection
