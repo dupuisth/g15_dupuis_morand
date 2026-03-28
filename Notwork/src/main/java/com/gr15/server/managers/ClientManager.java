@@ -125,8 +125,8 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
             int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
 
-            wrapper.getConnection().close();
             wrapper.getListeningThread().setShouldStop();
+            wrapper.getConnection().close();
             wrapper.getListeningThread().interrupt();
             wrapper.getHandler().setShouldStop();
             wrapper.getHandler().interrupt();
