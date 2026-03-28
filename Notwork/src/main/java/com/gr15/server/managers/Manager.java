@@ -30,19 +30,19 @@ public abstract class Manager<T extends RemoteConnection> {
         this.server = server;
     }
 
-    public void start() {
+    public void start() throws RuntimeException {
         // Prevent running the server two times
         if (serverSocket != null) {
-            Logger.warn("Socket already started");
-            return;
+            Logger.warn("Server socket already started");
+            throw new RuntimeException("Server socket already started");
         }
 
         // Start the server socket
         try {
             serverSocket = new ServerSocket(server.getInitialConfig().getClientSocketPort());
         } catch (IOException e) {
-            Logger.error("Failed to create the socket", e);
-            return;
+            Logger.error("Failed to create the server socket", e);
+            throw new RuntimeException("Failed to create the server socket", e);
         }
 
         // Start the server accepting thread

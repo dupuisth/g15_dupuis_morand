@@ -41,7 +41,12 @@ public class ServerApp {
     public void run() {
         Logger.info("Started new ServerApp");
 
-        clientManager.start();
+        try {
+            clientManager.start();
+        } catch (RuntimeException e) {
+            Logger.error("Failed to start the client manager", e);
+            return;
+        }
 
         // Keep alive
         while (!isStopping) {

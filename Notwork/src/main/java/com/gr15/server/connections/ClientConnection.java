@@ -23,8 +23,6 @@ public class ClientConnection extends RemoteConnection {
 
     @Override
     public String toString() {
-        return "ClientConnection{" +
-                "clientId=" + ClientId.toString(clientId) +
-                '}';
+        return ClientId.toString(clientId);
     }
 }
