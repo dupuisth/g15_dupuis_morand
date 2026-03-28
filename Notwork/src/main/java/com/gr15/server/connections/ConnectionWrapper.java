@@ -1,4 +1,4 @@
-package com.gr15.server.managers;
+package com.gr15.server.connections;
 
 public abstract class ConnectionWrapper<T> {
     private final T connection;

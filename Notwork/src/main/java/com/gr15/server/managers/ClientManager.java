@@ -8,6 +8,7 @@ import com.gr15.common.message.MessageCTS;
 import com.gr15.common.message.STC_Message;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
+import com.gr15.server.connections.ClientWrapper;
 import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
 

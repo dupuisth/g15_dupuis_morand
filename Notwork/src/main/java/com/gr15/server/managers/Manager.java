@@ -5,6 +5,7 @@ import com.gr15.common.connections.RemoteConnection;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.server.ServerApp;
 import com.gr15.server.SocketAcceptingThread;
+import com.gr15.server.connections.ConnectionWrapper;
 import com.gr15.utils.Logger;
 
 import java.io.IOException;
