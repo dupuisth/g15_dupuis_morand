@@ -1,4 +1,4 @@
-package com.gr15.common.message;
+package com.gr15.common.message.stc;
 
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;

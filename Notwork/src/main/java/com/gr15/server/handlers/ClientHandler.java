@@ -1,8 +1,8 @@
 package com.gr15.server.handlers;
 
 import com.gr15.common.Message;
-import com.gr15.common.message.STC_MessageHello;
-import com.gr15.common.message.STC_MessageNewClient;
+import com.gr15.common.message.stc.STC_MessageHello;
+import com.gr15.common.message.stc.STC_MessageNewClient;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.utils.Logger;
@@ -39,7 +39,6 @@ public class ClientHandler extends Thread {
         // Send the "NEW_CLIENT" to everyone else
         Message newClientMessage = STC_MessageNewClient.CreateMessage(clientConnection.getClientId());
         server.getClientManager().sendToAll(newClientMessage, clientConnection);
-
 
         // Do something later on, maybe implement the ping-pong stuff...
         while (!shouldStop && clientConnection.isConnected()) {

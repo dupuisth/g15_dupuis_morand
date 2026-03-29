@@ -72,10 +72,12 @@ public class AdminApp {
                 if (arg.startsWith(ServerConfig.ARG_COMPACT_KEY)) {
                     ServerConfig serverConfig = ServerConfig.FromCompactArgs(arg);
                     serverManager.addServer(serverConfig);
+                    Logger.info(serverConfig.toString());
                 }
                 else if (arg.startsWith(ClientConfig.ARG_COMPACT_KEY)) {
                     ClientConfig clientConfig = ClientConfig.FromCompactArgs(arg);
                     clientManager.addClient(clientConfig);
+                    Logger.info(clientConfig.toString());
                 }
             } catch (Exception e) {
                 Logger.error("Exception while parsing argument e=" + e.getMessage(), e);

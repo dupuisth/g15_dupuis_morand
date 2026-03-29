@@ -1,20 +1,9 @@
 package com.gr15.server;
 
-import com.gr15.common.ClientId;
-import com.gr15.common.Message;
-import com.gr15.common.message.CTS_Message;
-import com.gr15.common.message.MessageCTS;
-import com.gr15.common.message.STC_Message;
-import com.gr15.common.message.STC_MessageRemoveClient;
-import com.gr15.server.connections.ClientConnection;
-import com.gr15.server.handlers.ClientHandler;
 import com.gr15.server.managers.ClientManager;
+import com.gr15.server.managers.ServerManager;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
-
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 /**
  * Application to run for the server
@@ -25,6 +14,7 @@ public class ServerApp {
     private final ServerConfig initialConfig;
 
     private final ClientManager clientManager;
+    private final ServerManager serverManager;
 
     public static final int POLL_SLEEP = 1000 / 5; // 5 refresh/s
 
@@ -38,6 +28,7 @@ public class ServerApp {
         }
 
         clientManager = new ClientManager(this);
+        serverManager = new ServerManager(this);
     }
 
     public void run() {
@@ -50,15 +41,23 @@ public class ServerApp {
             return;
         }
 
+        try {
+            serverManager.start();
+        } catch (RuntimeException e) {
+            Logger.error("Failed to start the server manager", e);
+            return;
+        }
+
         // Keep alive
         while (!isStopping) {
             ThreadUtils.safeSleep(POLL_SLEEP);
 
             clientManager.pollEvents();
+            serverManager.pollEvents();
         }
 
         clientManager.stop();
-
+        serverManager.stop();
     }
 
     public void stop() {
@@ -72,5 +71,9 @@ public class ServerApp {
 
     public ClientManager getClientManager() {
         return clientManager;
+    }
+
+    public ServerManager getServerManager() {
+        return serverManager;
     }
 }

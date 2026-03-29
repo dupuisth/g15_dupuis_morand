@@ -2,7 +2,7 @@
   <configuration default="false" name="Admin" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.gr15.Application" />
     <module name="Notwork" />
-    <option name="PROGRAM_PARAMETERS" value="admin server=15:2222 client=127.0.0.1:2222 client=127.0.0.1:2222" />
+    <option name="PROGRAM_PARAMETERS" value="admin server=5:2001:2002:2003/15:127.0.0.1:2102 server=15:2101:2102:2103/5:127.0.0.1:2002/1:127.0.0.1:2202 server=1:2201:2202:2203/15:127.0.0.1:2102" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
