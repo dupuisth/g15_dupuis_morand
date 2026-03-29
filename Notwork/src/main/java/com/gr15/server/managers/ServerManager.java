@@ -3,12 +3,15 @@ package com.gr15.server.managers;
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
+import com.gr15.common.message.stc.STC_Message;
 import com.gr15.common.message.sts.MessageSTS;
+import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.common.message.sts.STS_Identify;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.ServerConnection;
 import com.gr15.server.connections.ServerWrapper;
+import static com.gr15.common.Constants.*;
 
 import com.gr15.server.handlers.ServerHandler;
 import com.gr15.utils.Logger;
@@ -16,11 +19,12 @@ import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     /** Array of all the servers connected (index => serverId) */
-    private final ServerWrapper[] connectionsToServer = new ServerWrapper[ClientId.MAX_SERVERS];
+    private final ServerWrapper[] connectionsToServer = new ServerWrapper[MAX_SERVERS];
     private final ArrayList<ServerWrapper> pendingAuthentification = new ArrayList<>();
 
     private final Object connectionsLock = new Object();
@@ -28,6 +32,9 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private final Queue<ServerConnection> connectionsToRemoveQueue = new LinkedList<>();
     private final Queue<MessageReceived> messageReceivedQueue = new LinkedList<>();
     private final Queue<MessageToSend> messageToSendQueue = new LinkedList<>();
+
+    private final HashMap<Integer, LocalDateTime> broadcastMap = new HashMap<>();
+    int currentBroadcatId = 0;
 
     public ServerManager(ServerApp server) {
         super(server);
@@ -224,6 +231,10 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                 STS_Identify parsed = STS_Identify.ReadMessage(message);
                 handleMessage(fromServer, parsed);
             }
+            case BROADCAST_CHAT -> {
+                STS_BroadcastChat parsed = STS_BroadcastChat.ReadMessage(message);
+                handleMessage(fromServer, parsed);
+            }
         }
     }
 
@@ -258,6 +269,19 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         // Create the response
         Message response = STS_Identify.CreateMessage(server.getInitialConfig().getServerId(), identify.getRebounds() + 1);
         send(fromServer, response);
+    }
+
+    private void handleMessage(ServerConnection fromServer, STS_BroadcastChat broadcastChat) {
+        Logger.info("Received " + broadcastChat);
+
+        // Broadcast it to my clients
+        Message message = STC_Message.CreateMessage(broadcastChat.getFromClientId(), broadcastChat.getContent());
+        server.getClientManager().sendToAll(message);
+
+        if (broadcastChat.getTtl() > 0) {
+            // Broadcast to neighbors
+            sendToAll(STS_BroadcastChat.CreateMessage(broadcastChat.getFromClientId(), broadcastChat.getContent(), broadcastChat.getTtl() - 1), fromServer);
+        }
     }
 
     @Override

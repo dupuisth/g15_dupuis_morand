@@ -5,7 +5,8 @@ package com.gr15.common.message.sts;
  */
 public enum MessageSTS {
     HELLO(0),
-    IDENTIFY(1);
+    IDENTIFY(1),
+    BROADCAST_CHAT(2);
 
     private final int val;
 

@@ -2,6 +2,7 @@ package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.common.ClientId;
+import static com.gr15.common.Constants.*;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -76,7 +77,7 @@ public class ServerConfig {
     }
 
     public boolean validateConfiguration() {
-        if (serverId == null || serverId < 0 || serverId >= ClientId.MAX_SERVERS) {
+        if (serverId == null || serverId < 0 || serverId >= MAX_SERVERS) {
             return false;
         }
 
@@ -104,7 +105,7 @@ public class ServerConfig {
                 return false;
             }
 
-            if (neighbor.getServerId() < 0 || neighbor.getServerId() >= ClientId.MAX_SERVERS) {
+            if (neighbor.getServerId() < 0 || neighbor.getServerId() >= MAX_SERVERS) {
                 return false;
             }
 
@@ -129,7 +130,7 @@ public class ServerConfig {
     }
 
     public static ServerConfig FromCli() {
-        int serverId = CliHelper.inputInt("Enter serverId", 0, ClientId.MAX_SERVERS - 1);
+        int serverId = CliHelper.inputInt("Enter serverId", 0, MAX_SERVERS - 1);
         int clientSocketPort = CliHelper.inputInt("Enter client socket port", PORT_MIN, PORT_MAX);
         int serverSocketPort = CliHelper.inputInt("Enter server socket port", PORT_MIN, PORT_MAX);
         int adminSocketPort = CliHelper.inputInt("Enter admin socket port", PORT_MIN, PORT_MAX);
