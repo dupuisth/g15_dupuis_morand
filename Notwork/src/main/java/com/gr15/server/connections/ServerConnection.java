@@ -10,7 +10,7 @@ import java.net.Socket;
  * Represent a connection to a server
  */
 public class ServerConnection extends RemoteConnection {
-    private Integer serverId;
+    private volatile Integer serverId;
 
     public ServerConnection(Socket socket, Integer serverId) throws IOException {
         super(socket);
