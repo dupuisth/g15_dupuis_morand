@@ -44,12 +44,4 @@ public class ListeningThread<T extends RemoteConnection> extends Thread {
     public void setShouldStop() {
         shouldStop = true;
     }
-
-    public void setExceptionHandler(IListeningExceptionHandler<T> exceptionHandler) {
-        this.exceptionHandler = exceptionHandler;
-    }
-
-    public void setMessageHandler(IListeningMessageHandler<T> messageHandler) {
-        this.messageHandler = messageHandler;
-    }
 }
