@@ -279,8 +279,6 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     }
 
     private boolean shouldHandleBroadcast(BroadcastData broadcastData) {
-        boolean shouldHandle = true;
-
         LocalDateTime currentDateTime = LocalDateTime.now();
 
         // Check if I've already handled this message (or if it is mine)
@@ -288,7 +286,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         if (BroadcastId.GetServerId(broadcastId) == server.getInitialConfig().getServerId()) {
             // It's my message, do nothing
             Logger.debug("Received my own broadcast, doing nothing");
-            shouldHandle = false;
+            return false;
         }
         else { // Check if the broadcastId was already handled (or if it expired)
             synchronized (broadcastMap) {
@@ -299,20 +297,15 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
                     // Check if the gap is enough to forget it (if not, don't handle)
                     if (gap.getSeconds() < BROADCAST_ID_FORGER_AFTER_SECONDS) {
-                        shouldHandle = false;
+                        return false;
                     }
                 }
-            }
-        }
 
-        if (shouldHandle) {
-            // Update the map
-            synchronized (broadcastMap) {
+                // If we are here, then we can process it
                 broadcastMap.put(broadcastId, currentDateTime);
             }
         }
-
-        return shouldHandle;
+        return true;
     }
 
     @Override
