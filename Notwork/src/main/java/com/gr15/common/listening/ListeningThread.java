@@ -43,5 +43,6 @@ public class ListeningThread<T extends RemoteConnection> extends Thread {
 
     public void setShouldStop() {
         shouldStop = true;
+        this.interrupt();
     }
 }

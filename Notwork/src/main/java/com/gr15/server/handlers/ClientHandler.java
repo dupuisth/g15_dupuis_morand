@@ -52,5 +52,6 @@ public class ClientHandler extends Thread {
 
     public void setShouldStop() {
         shouldStop = true;
+        this.interrupt();
     }
 }

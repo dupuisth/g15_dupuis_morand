@@ -48,5 +48,6 @@ public class ServerHandler extends Thread {
 
     public void setShouldStop() {
         shouldStop = true;
+        this.interrupt();
     }
 }

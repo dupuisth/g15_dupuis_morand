@@ -46,5 +46,6 @@ public class SocketAcceptingThread extends Thread {
 
     public void setShouldStop() {
         shouldStop = true;
+        this.interrupt();
     }
 }
