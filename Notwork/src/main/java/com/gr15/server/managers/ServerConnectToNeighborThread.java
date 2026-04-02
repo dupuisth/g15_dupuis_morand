@@ -63,6 +63,21 @@ public class ServerConnectToNeighborThread extends Thread {
                 ServerWrapper wrapper = new ServerWrapper(serverConnection, listener, handler);
 
                 synchronized (serverManager.getConnectionsLock()) {
+                    ServerWrapper currentWrapper = serverManager.getConnections()[info.getServerId()];
+                    if (currentWrapper != null) {
+                        if (currentWrapper.getConnection() == wrapper.getConnection()) {
+                            Logger.info("Already connected to the server " + info);
+                            // OK, already registered, do nothing
+                            continue;
+                        } else {
+                            // Another connection is using the serverId, keep the old one
+                            Logger.warn("Another connection is already using the neighbor serverId, neighbor=" + info + ", parasite=" + currentWrapper.getConnection());
+                            wrapper.getConnection().close();
+                            continue;
+                        }
+                    }
+
+                    // Else, add it
                     serverManager.getConnections()[info.getServerId()] = wrapper;
                 }
 
