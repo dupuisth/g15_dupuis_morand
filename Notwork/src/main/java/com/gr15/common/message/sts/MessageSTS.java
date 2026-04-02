@@ -1,10 +1,12 @@
-package com.gr15.common.message;
+package com.gr15.common.message.sts;
 
 /**
  * Types of message Server -> Server
  */
 public enum MessageSTS {
-    HELLO(0);
+    HELLO(0),
+    IDENTIFY(1),
+    BROADCAST_CHAT(2);
 
     private final int val;
 

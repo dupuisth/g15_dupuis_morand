@@ -2,8 +2,10 @@ package com.gr15.admin;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.client.ClientConfig;
+import com.gr15.common.Constants;
 import com.gr15.server.ServerConfig;
 import com.gr15.utils.Logger;
+import com.gr15.utils.ThreadUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,16 +74,18 @@ public class AdminApp {
                 if (arg.startsWith(ServerConfig.ARG_COMPACT_KEY)) {
                     ServerConfig serverConfig = ServerConfig.FromCompactArgs(arg);
                     serverManager.addServer(serverConfig);
+                    Logger.info(serverConfig.toString());
                 }
                 else if (arg.startsWith(ClientConfig.ARG_COMPACT_KEY)) {
                     ClientConfig clientConfig = ClientConfig.FromCompactArgs(arg);
                     clientManager.addClient(clientConfig);
+                    Logger.info(clientConfig.toString());
                 }
             } catch (Exception e) {
                 Logger.error("Exception while parsing argument e=" + e.getMessage(), e);
             }
-
         }
+
 
         menu();
     }

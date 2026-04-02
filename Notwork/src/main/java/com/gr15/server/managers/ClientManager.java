@@ -1,14 +1,23 @@
 package com.gr15.server.managers;
 
 import com.gr15.common.ClientId;
+import com.gr15.common.Constants;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
-import com.gr15.common.message.*;
+import com.gr15.common.message.cts.CTS_Message;
+import com.gr15.common.message.cts.MessageCTS;
+import com.gr15.common.message.stc.STC_Message;
+import com.gr15.common.message.stc.STC_MessageRemoveClient;
+import com.gr15.common.message.sts.BroadcastData;
+import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.connections.ClientWrapper;
+import com.gr15.server.connections.ServerWrapper;
 import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
+import static com.gr15.common.Constants.*;
+
 
 import java.io.IOException;
 import java.net.Socket;
@@ -19,7 +28,7 @@ import java.util.Queue;
 
 public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     /** Array of all the clients connected (index => localId) */
-    private final ClientWrapper[] connectionsToClient = new ClientWrapper[ClientId.MAX_CLIENTS];
+    private final ClientWrapper[] connectionsToClient = new ClientWrapper[MAX_CLIENTS];
 
     private final Object connectionsLock = new Object();
 
@@ -251,12 +260,16 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
         // Send to all clients except sender
         Message echoMessage = STC_Message.CreateMessage(client.getClientId(), message.getContent());
         sendToAll(echoMessage, client);
+
+        // Send to all servers
+        Message bridgeMessage = STS_BroadcastChat.CreateMessage(client.getClientId(), message.getContent(), new BroadcastData(TTL_DEFAULT_VALUE, server.getServerManager().getNextBroadcastId()));
+        server.getServerManager().sendToAll(bridgeMessage);
     }
 
     private int getNextClientId() throws RuntimeException{
         synchronized (getConnectionsLock())
         {
-            for (int i = 0; i < ClientId.MAX_CLIENTS; i++) {
+            for (int i = 0; i < MAX_CLIENTS; i++) {
                 if (connectionsToClient[i] == null) {
                     return ClientId.Create(server.getInitialConfig().getServerId(), i);
                 }

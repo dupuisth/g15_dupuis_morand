@@ -9,8 +9,8 @@ import com.gr15.utils.Logger;
  */
 public class ListeningThread<T extends RemoteConnection> extends Thread {
     private final T remoteConnection;
-    private final IListeningMessageHandler<T> messageHandler;
-    private final IListeningExceptionHandler<T> exceptionHandler;
+    private IListeningMessageHandler<T> messageHandler;
+    private IListeningExceptionHandler<T> exceptionHandler;
 
     private volatile boolean shouldStop = false;
 
@@ -43,5 +43,6 @@ public class ListeningThread<T extends RemoteConnection> extends Thread {
 
     public void setShouldStop() {
         shouldStop = true;
+        this.interrupt();
     }
 }

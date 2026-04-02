@@ -1,7 +1,8 @@
-package com.gr15.common.message;
+package com.gr15.common.message.stc;
 
 import com.gr15.common.ClientId;
 import com.gr15.common.Message;
+import static com.gr15.common.Constants.*;
 
 public class STC_MessageNewClient {
     public static final int ID = MessageSTC.NEW_CLIENT.getId();
@@ -14,12 +15,12 @@ public class STC_MessageNewClient {
 
     public static Message CreateMessage(int clientId) {
         Message message = new Message(ID);
-        message.addInt(clientId, ClientId.TOTAL_BITS);
+        message.addInt(clientId, TOTAL_CLIENT_ID_BITS);
         return message;
     }
 
     public static STC_MessageNewClient ReadMessage(Message message) {
-        int clientId = message.readInt(ClientId.TOTAL_BITS);
+        int clientId = message.readInt(TOTAL_CLIENT_ID_BITS);
         return new STC_MessageNewClient(clientId);
     }
 

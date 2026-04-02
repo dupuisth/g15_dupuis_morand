@@ -1,20 +1,10 @@
 package com.gr15.server;
 
-import com.gr15.common.ClientId;
-import com.gr15.common.Message;
-import com.gr15.common.message.CTS_Message;
-import com.gr15.common.message.MessageCTS;
-import com.gr15.common.message.STC_Message;
-import com.gr15.common.message.STC_MessageRemoveClient;
-import com.gr15.server.connections.ClientConnection;
-import com.gr15.server.handlers.ClientHandler;
+import com.gr15.common.Constants;
 import com.gr15.server.managers.ClientManager;
+import com.gr15.server.managers.ServerManager;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
-
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 /**
  * Application to run for the server
@@ -25,8 +15,7 @@ public class ServerApp {
     private final ServerConfig initialConfig;
 
     private final ClientManager clientManager;
-
-    public static final int POLL_SLEEP = 1000 / 5; // 5 refresh/s
+    private final ServerManager serverManager;
 
 
     public ServerApp(ServerConfig initialConfig) {
@@ -37,7 +26,10 @@ public class ServerApp {
             throw new IllegalArgumentException("Invalid configuration");
         }
 
+        Logger.info("Config " + initialConfig);
+
         clientManager = new ClientManager(this);
+        serverManager = new ServerManager(this);
     }
 
     public void run() {
@@ -50,15 +42,24 @@ public class ServerApp {
             return;
         }
 
+        try {
+            serverManager.start();
+        } catch (RuntimeException e) {
+            Logger.error("Failed to start the server manager", e);
+            clientManager.stop();
+            return;
+        }
+
         // Keep alive
         while (!isStopping) {
-            ThreadUtils.safeSleep(POLL_SLEEP);
+            ThreadUtils.safeSleep(Constants.SERVER_POLL_DELAY_MS);
 
             clientManager.pollEvents();
+            serverManager.pollEvents();
         }
 
         clientManager.stop();
-
+        serverManager.stop();
     }
 
     public void stop() {
@@ -72,5 +73,9 @@ public class ServerApp {
 
     public ClientManager getClientManager() {
         return clientManager;
+    }
+
+    public ServerManager getServerManager() {
+        return serverManager;
     }
 }

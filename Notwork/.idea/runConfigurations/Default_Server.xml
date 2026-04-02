@@ -2,7 +2,7 @@
   <configuration default="false" name="Default Server" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.gr15.Application" />
     <module name="Notwork" />
-    <option name="PROGRAM_PARAMETERS" value="server serverId=15 clientport=2222" />
+    <option name="PROGRAM_PARAMETERS" value="server serverId=15 clientport=2222 serverport=2223 adminport=2224" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
