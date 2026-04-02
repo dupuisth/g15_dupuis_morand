@@ -387,7 +387,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
      */
     public int getNextBroadcastId() {
         int localId = currentLocalBroadcastId++;
-        if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS - 1)) {
+        if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS) - 1) {
             currentLocalBroadcastId = 0;
             Logger.info("Reached the max of localBroadcastId, resetting");
         }
