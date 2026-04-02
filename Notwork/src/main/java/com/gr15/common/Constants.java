@@ -24,6 +24,6 @@ public class Constants {
     public static final int TTL_MAX_VALUE = Math.powExact(2, TTL_BITS) - 1;
     public static final int TTL_DEFAULT_VALUE = TTL_MAX_VALUE;
 
-    public static final int SERVER_POLL_RATE = 24;
+    public static final int SERVER_POLL_RATE = 1;
     public static final int SERVER_POLL_DELAY_MS = 1000 / SERVER_POLL_RATE;
 }

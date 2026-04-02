@@ -70,7 +70,6 @@ public abstract class Manager<T extends RemoteConnection, K extends ConnectionWr
                 Logger.error("Exception while trying waiting for serverSocketAcceptingThread ending", e);
             }
         }
-        Logger.info("Cleanup done, exiting");
     }
 
     /**

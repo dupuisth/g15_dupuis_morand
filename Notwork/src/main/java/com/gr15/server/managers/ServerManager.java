@@ -39,6 +39,8 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private final HashMap<Integer, LocalDateTime> broadcastMap = new HashMap<>();
     int currentLocalBroadcastId = 0;
 
+    ServerConnectToNeighborThread connectToNeighborThread;
+
     public ServerManager(ServerApp server) {
         super(server);
     }
@@ -47,49 +49,22 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     public void start() throws RuntimeException {
         super.start();
 
-        Thread thread = new Thread(() -> {
-            // Try to connect to the neighbors !
-            while (true) {
-                Set<Integer> serverIds = getServerIds();
+        connectToNeighborThread = new ServerConnectToNeighborThread(this);
+        connectToNeighborThread.start();
+    }
 
-                ArrayList<ServerConfig.NeighborServerInfo> notConnected = new ArrayList<>();
-                for (ServerConfig.NeighborServerInfo neighborServerInfo : server.getInitialConfig().getNeighbors()) {
-                    if (!serverIds.contains(neighborServerInfo.getServerId())) {
-                        notConnected.add(neighborServerInfo);
-                    }
-                }
+    @Override
+    public void stop() {
+        super.stop();
 
-                for (ServerConfig.NeighborServerInfo info : notConnected) {
-                    // The lower serverId should initiate the connection
-                    if (info.getServerId() < server.getInitialConfig().getServerId()) continue;
-
-
-                    ServerConnection serverConnection;
-                    try {
-                        serverConnection = new ServerConnection(info.getServerHostname(), info.getServerPort(), true, info.getServerId());
-                    } catch (IOException e) {
-                        Logger.error("Failed to connect to neighbor server: " + info, e);
-                        continue;
-                    }
-
-                    ServerHandler handler = new ServerHandler(serverConnection, server, info);
-                    ListeningThread<ServerConnection> listener = new ListeningThread<>(serverConnection, this::onMessageRead, this::onListeningError);
-                    ServerWrapper wrapper = new ServerWrapper(serverConnection, listener, handler);
-
-                    synchronized (getConnectionsLock()) {
-                        connectionsToServer[info.getServerId()] = wrapper;
-                    }
-
-                    handler.start();
-                    listener.start();
-                }
-
-                if (!ThreadUtils.safeSleep(SERVER_POLL_DELAY_MS)) {
-                    return;
-                }
+        if (connectToNeighborThread != null) {
+            connectToNeighborThread.setShouldStop();
+            try {
+                connectToNeighborThread.join(1000);
+            } catch (InterruptedException e) {
+                Logger.error("Exception while trying waiting for connectToNeighborThread ending", e);
             }
-        });
-        thread.start();
+        }
     }
 
     @Override
@@ -382,7 +357,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         }
     }
 
-    private Set<Integer> getServerIds() {
+    Set<Integer> getServerIds() {
         Set<Integer> serverIds = new HashSet<>();
         synchronized (getConnectionsLock()) {
             for (ServerWrapper sw : connectionsToServer) {
