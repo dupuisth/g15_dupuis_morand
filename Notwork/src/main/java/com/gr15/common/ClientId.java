@@ -10,8 +10,11 @@ import static com.gr15.common.Constants.*;
  */
 public class ClientId {
     public static int Create(int serverId, int localId) {
-        int serverBits = serverId << (Constants.TOTAL_CLIENT_ID_BITS - SERVER_ID_BITS);
-        int clientBits = localId & (TOTAL_CLIENT_ID_BITS_BITMASK >> (TOTAL_CLIENT_ID_BITS - LOCAL_ID_BITS));
+        int serverMask = TOTAL_CLIENT_ID_BITS_BITMASK >> (TOTAL_CLIENT_ID_BITS - SERVER_ID_BITS);
+        int localMask = TOTAL_CLIENT_ID_BITS_BITMASK >> (TOTAL_CLIENT_ID_BITS - LOCAL_ID_BITS);
+
+        int serverBits = (serverId & serverMask) << (TOTAL_CLIENT_ID_BITS - SERVER_ID_BITS);
+        int clientBits = localId & localMask;
 
         return serverBits | clientBits;
     }
