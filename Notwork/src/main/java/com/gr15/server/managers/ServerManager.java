@@ -182,7 +182,9 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
             // Remove the connection
             if (isPending) {
-                pendingAuthentification.remove(connection);
+                synchronized (pendingAuthentification) {
+                    pendingAuthentification.remove(wrapper);
+                }
             } else {
                 connectionsToServer[connection.getServerId()] = null;
             }
