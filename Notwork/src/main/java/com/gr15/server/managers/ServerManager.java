@@ -37,7 +37,8 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private final Queue<MessageToSend> messageToSendQueue = new LinkedList<>();
 
     private final HashMap<Integer, LocalDateTime> broadcastMap = new HashMap<>();
-    int currentLocalBroadcastId = 0;
+    private int currentLocalBroadcastId = 0;
+    private final Object currentLocalBroadcastIdLock = new Object();
 
     ServerConnectToNeighborThread connectToNeighborThread;
 
@@ -386,11 +387,14 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
      * Create a broadcastId from currentLocalBroadcastId, increment currentLocalBroadcastId and return the created broadcastId
      */
     public int getNextBroadcastId() {
-        int localId = currentLocalBroadcastId++;
-        if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS) - 1) {
-            currentLocalBroadcastId = 0;
-            Logger.info("Reached the max of localBroadcastId, resetting");
+        int localId;
+        synchronized (currentLocalBroadcastIdLock) {
+            localId = currentLocalBroadcastId++;
+            if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS) - 1) {
+                currentLocalBroadcastId = 0;
+            }
         }
+
 
         int broadcastId = BroadcastId.Create(server.getInitialConfig().getServerId(), localId);
         return broadcastId;
