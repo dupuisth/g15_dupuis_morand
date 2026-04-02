@@ -118,13 +118,19 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
         // Create a handler
         ServerHandler handler = new ServerHandler(serverConnection, server, null);
-        handler.start();
         // Create the listening thread
         ListeningThread<ServerConnection> listener = createDefaultListeningThread(serverConnection);
-        listener.start();
 
         ServerWrapper wrapper = new ServerWrapper(serverConnection, listener, handler);
-        pendingAuthentification.add(wrapper);
+
+        // Add to the list
+        synchronized (pendingAuthentification) {
+            pendingAuthentification.add(wrapper);
+        }
+
+        // Then start acting
+        listener.start();
+        handler.start();
     }
 
     @Override
