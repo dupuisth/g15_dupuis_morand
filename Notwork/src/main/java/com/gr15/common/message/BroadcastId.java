@@ -17,7 +17,7 @@ public class BroadcastId {
     }
 
     public static int GetServerId(int broadcastId) {
-        return broadcastId >> BROADCAST_ID_SERVER_BITS;
+        return broadcastId >> BROADCAST_ID_LOCAL_BITS;
     }
 
     public static int GetLocalId(int broadcastId) {
