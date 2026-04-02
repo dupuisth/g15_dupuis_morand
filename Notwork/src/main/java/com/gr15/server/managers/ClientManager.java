@@ -1,12 +1,14 @@
 package com.gr15.server.managers;
 
 import com.gr15.common.ClientId;
+import com.gr15.common.Constants;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.cts.CTS_Message;
 import com.gr15.common.message.cts.MessageCTS;
 import com.gr15.common.message.stc.STC_Message;
 import com.gr15.common.message.stc.STC_MessageRemoveClient;
+import com.gr15.common.message.sts.BroadcastData;
 import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
@@ -260,7 +262,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
         sendToAll(echoMessage, client);
 
         // Send to all servers
-        Message bridgeMessage = STS_BroadcastChat.CreateMessage(client.getClientId(), message.getContent(), STS_BroadcastChat.MAX_TTL);
+        Message bridgeMessage = STS_BroadcastChat.CreateMessage(client.getClientId(), message.getContent(), new BroadcastData(TTL_DEFAULT_VALUE, server.getServerManager().getNextBroadcastId()));
         server.getServerManager().sendToAll(bridgeMessage);
     }
 

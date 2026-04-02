@@ -1,5 +1,6 @@
 package com.gr15.server;
 
+import com.gr15.common.Constants;
 import com.gr15.server.managers.ClientManager;
 import com.gr15.server.managers.ServerManager;
 import com.gr15.utils.Logger;
@@ -16,8 +17,6 @@ public class ServerApp {
     private final ClientManager clientManager;
     private final ServerManager serverManager;
 
-    public static final int POLL_SLEEP = 1000 / 5; // 5 refresh/s
-
 
     public ServerApp(ServerConfig initialConfig) {
         this.initialConfig = initialConfig;
@@ -26,6 +25,8 @@ public class ServerApp {
             Logger.error("Invalid configuration config=" + initialConfig);
             throw new IllegalArgumentException("Invalid configuration");
         }
+
+        Logger.info("Config " + initialConfig);
 
         clientManager = new ClientManager(this);
         serverManager = new ServerManager(this);
@@ -50,7 +51,7 @@ public class ServerApp {
 
         // Keep alive
         while (!isStopping) {
-            ThreadUtils.safeSleep(POLL_SLEEP);
+            ThreadUtils.safeSleep(Constants.SERVER_POLL_DELAY_MS);
 
             clientManager.pollEvents();
             serverManager.pollEvents();

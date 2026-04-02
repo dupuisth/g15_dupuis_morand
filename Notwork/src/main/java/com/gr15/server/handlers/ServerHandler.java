@@ -1,5 +1,6 @@
 package com.gr15.server.handlers;
 
+import com.gr15.common.Constants;
 import com.gr15.common.message.sts.STS_Identify;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
@@ -37,7 +38,7 @@ public class ServerHandler extends Thread {
             }
 
 
-            if (!ThreadUtils.safeSleep(1000)) {
+            if (!ThreadUtils.safeSleep(Constants.SERVER_POLL_DELAY_MS)) {
                 break;
             }
         }

@@ -1,9 +1,11 @@
 package com.gr15.server.managers;
 
-import com.gr15.common.ClientId;
+import com.gr15.common.Constants;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
+import com.gr15.common.message.BroadcastId;
 import com.gr15.common.message.stc.STC_Message;
+import com.gr15.common.message.sts.BroadcastData;
 import com.gr15.common.message.sts.MessageSTS;
 import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.common.message.sts.STS_Identify;
@@ -19,6 +21,7 @@ import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -34,7 +37,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private final Queue<MessageToSend> messageToSendQueue = new LinkedList<>();
 
     private final HashMap<Integer, LocalDateTime> broadcastMap = new HashMap<>();
-    int currentBroadcatId = 0;
+    int currentLocalBroadcastId = 0;
 
     public ServerManager(ServerApp server) {
         super(server);
@@ -60,6 +63,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                     // The lower serverId should initiate the connection
                     if (info.getServerId() < server.getInitialConfig().getServerId()) continue;
 
+
                     ServerConnection serverConnection;
                     try {
                         serverConnection = new ServerConnection(info.getServerHostname(), info.getServerPort(), true, info.getServerId());
@@ -80,7 +84,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                     listener.start();
                 }
 
-                if (!ThreadUtils.safeSleep(5000)) {
+                if (!ThreadUtils.safeSleep(SERVER_POLL_DELAY_MS)) {
                     return;
                 }
             }
@@ -274,14 +278,57 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private void handleMessage(ServerConnection fromServer, STS_BroadcastChat broadcastChat) {
         Logger.info("Received " + broadcastChat);
 
+
+        if (!shouldHandleBroadcast(broadcastChat.getBroadcastData())) {
+            return;
+        }
+
+
         // Broadcast it to my clients
         Message message = STC_Message.CreateMessage(broadcastChat.getFromClientId(), broadcastChat.getContent());
         server.getClientManager().sendToAll(message);
 
-        if (broadcastChat.getTtl() > 0) {
-            // Broadcast to neighbors
-            sendToAll(STS_BroadcastChat.CreateMessage(broadcastChat.getFromClientId(), broadcastChat.getContent(), broadcastChat.getTtl() - 1), fromServer);
+        if (broadcastChat.getBroadcastData().getTtl() > 0) {
+            // Broadcast to neighbors (except from the one we received)
+            sendToAll(STS_BroadcastChat.CreateMessage(broadcastChat.getFromClientId(), broadcastChat.getContent(), broadcastChat.getBroadcastData().decrementTtl()), fromServer);
         }
+    }
+
+    private boolean shouldHandleBroadcast(BroadcastData broadcastData) {
+        boolean shouldHandle = true;
+
+        LocalDateTime currentDateTime = LocalDateTime.now();
+
+        // Check if I've already handled this message (or if it is mine)
+        int broadcastId = broadcastData.getBroadcastId();
+        if (BroadcastId.GetServerId(broadcastId) == server.getInitialConfig().getServerId()) {
+            // It's my message, do nothing
+            Logger.debug("Received my own broadcast, doing nothing");
+            shouldHandle = false;
+        }
+        else { // Check if the broadcastId was already handled (or if it expired)
+            synchronized (broadcastMap) {
+                if (broadcastMap.containsKey(broadcastId)) {
+                    // This id is already in the map, check if it was long ago
+                    LocalDateTime dateTime = broadcastMap.get(broadcastId);
+                    Duration gap = Duration.between(dateTime, currentDateTime);
+
+                    // Check if the gap is enough to forget it (if not, don't handle)
+                    if (gap.getSeconds() < BROADCAST_ID_FORGER_AFTER_SECONDS) {
+                        shouldHandle = false;
+                    }
+                }
+            }
+        }
+
+        if (shouldHandle) {
+            // Update the map
+            synchronized (broadcastMap) {
+                broadcastMap.put(broadcastId, currentDateTime);
+            }
+        }
+
+        return shouldHandle;
     }
 
     @Override
@@ -350,6 +397,20 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
             }
         }
         return serverIds;
+    }
+
+    /**
+     * Create a broadcastId from currentLocalBroadcastId, increment currentLocalBroadcastId and return the created broadcastId
+     */
+    public int getNextBroadcastId() {
+        int localId = currentLocalBroadcastId++;
+        if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS - 1)) {
+            currentLocalBroadcastId = 0;
+            Logger.info("Reached the max of localBroadcastId, resetting");
+        }
+
+        int broadcastId = BroadcastId.Create(server.getInitialConfig().getServerId(), localId);
+        return broadcastId;
     }
 
     @Override
