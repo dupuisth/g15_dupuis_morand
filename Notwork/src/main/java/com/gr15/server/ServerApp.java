@@ -46,6 +46,7 @@ public class ServerApp {
             serverManager.start();
         } catch (RuntimeException e) {
             Logger.error("Failed to start the server manager", e);
+            clientManager.stop();
             return;
         }
 
