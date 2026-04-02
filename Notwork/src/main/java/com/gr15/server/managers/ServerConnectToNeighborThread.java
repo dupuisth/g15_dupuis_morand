@@ -31,8 +31,10 @@ public class ServerConnectToNeighborThread extends Thread {
         // Try to connect to the neighbors !
         while (!shouldStop) {
             if (!ThreadUtils.safeSleep(SERVER_POLL_DELAY_MS)) {
-                if (pause) continue;
+                break;
             }
+
+            if (pause) continue;
 
             Set<Integer> serverIds = serverManager.getServerIds();
 
