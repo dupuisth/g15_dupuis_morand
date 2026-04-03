@@ -1,7 +1,7 @@
 package com.gr15.server;
 
 import com.gr15.cli.CliHelper;
-import com.gr15.common.ClientId;
+
 import static com.gr15.common.Constants.*;
 
 import java.util.ArrayList;
@@ -239,21 +239,6 @@ public class ServerConfig {
         return args;
     }
 
-    public String toCompactArg() {
-        StringBuilder builder = new StringBuilder();
-        builder.append(ARG_COMPACT_KEY)
-                .append(serverId).append(":")
-                .append(clientSocketPort).append(":")
-                .append(serverSocketPort).append(":")
-                .append(adminSocketPort);
-
-        for (NeighborServerInfo neighbor : neighbors) {
-            builder.append("/").append(neighbor.toArgumentValue());
-        }
-
-        return builder.toString();
-    }
-
     public Integer getServerId() {
         return serverId;
     }
@@ -311,12 +296,21 @@ public class ServerConfig {
                 '}';
     }
 
+    public void removeNeighbor(NeighborServerInfo neighborServerInfo) {
+        int index = 0;
+        while (index < neighbors.size() && !neighbors.get(index).serverHostname.equals(neighborServerInfo.serverHostname)) { index++; }
+
+        if (index >= neighbors.size()) return;
+
+        neighbors.remove(index);
+    }
+
     public static class NeighborServerInfo {
-        private final int serverId;
+        private final Integer serverId;
         private final String serverHostname;
         private final int serverPort;
 
-        public NeighborServerInfo(int serverId, String serverHostname, int serverPort) {
+        public NeighborServerInfo(Integer serverId, String serverHostname, int serverPort) {
             this.serverId = serverId;
             this.serverHostname = serverHostname;
             this.serverPort = serverPort;
@@ -339,7 +333,8 @@ public class ServerConfig {
             }
 
             try {
-                int serverId = Integer.parseInt(parts[0]);
+                Integer serverId = Integer.parseInt(parts[0]);
+                if (serverId < 0) serverId = null;
                 String hostname = parts[1];
                 int serverPort = Integer.parseInt(parts[2]);
 
@@ -353,7 +348,7 @@ public class ServerConfig {
             return serverId + ":" + serverHostname + ":" + serverPort;
         }
 
-        public int getServerId() {
+        public Integer getServerId() {
             return serverId;
         }
 
@@ -378,7 +373,7 @@ public class ServerConfig {
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof NeighborServerInfo that)) return false;
-            return serverId == that.serverId
+            return Objects.equals(serverId, that.serverId)
                     && serverPort == that.serverPort
                     && Objects.equals(serverHostname, that.serverHostname);
         }

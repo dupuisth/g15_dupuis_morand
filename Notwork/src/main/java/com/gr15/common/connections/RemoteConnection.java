@@ -144,4 +144,12 @@ public abstract class RemoteConnection {
     public boolean isConnected() {
         return socket != null && socket.isConnected() && !socket.isClosed();
     }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public int getPort() {
+        return port;
+    }
 }

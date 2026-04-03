@@ -1,28 +1,20 @@
-package com.gr15.client;
+package com.gr15.admin.console;
 
 import com.gr15.cli.CliHelper;
 import com.gr15.server.ServerConfig;
 
-import java.util.ArrayList;
-
-/**
- * Represents the configuration of the client app
- */
-public class ClientConfig {
-    public static final String ARG_SERVER_HOSTNAME_KEY = "hostname=";
-    public static final String ARG_SERVER_PORT_KEY = "port=";
-
-    public static final String ARG_COMPACT_KEY = "client=";
+public class AdminConsoleConfig {
+    public static final String ARG_COMPACT_KEY = "console=";
 
     private String serverHostname;
     private Integer serverPort;
 
-    public ClientConfig() {
+    public AdminConsoleConfig() {
         serverHostname = null;
         serverPort = null;
     }
 
-    public ClientConfig(String serverHostname, Integer serverPort) {
+    public AdminConsoleConfig(String serverHostname, Integer serverPort) {
         this.serverHostname = serverHostname;
         this.serverPort = serverPort;
     }
@@ -39,57 +31,35 @@ public class ClientConfig {
         return true;
     }
 
-    public static ClientConfig FromCli() {
+    public static AdminConsoleConfig FromCli() {
         String serverHostname = CliHelper.inputString("Enter server hostname", 0, 0);
         int serverPort = CliHelper.inputInt("Enter server port", ServerConfig.PORT_MIN, ServerConfig.PORT_MAX);
 
-        return new ClientConfig(serverHostname, serverPort);
+        return new AdminConsoleConfig(serverHostname, serverPort);
     }
 
-    public static ClientConfig FromArgs(String[] args) {
-        ClientConfig config = new ClientConfig ();
-
-        // Read the args to get configuration from it
-        for (String arg : args) {
-            if (arg.startsWith(ARG_SERVER_HOSTNAME_KEY)) {
-                config.setServerHostname(arg.substring(ARG_SERVER_HOSTNAME_KEY.length()));
-            } else if (arg.startsWith(ARG_SERVER_PORT_KEY)) {
-                try {
-                    config.setServerPort(Integer.parseInt(arg.substring(ARG_SERVER_PORT_KEY.length())));
-                } catch (NumberFormatException e) {
-                    // Do nothing, let it fail
-                }
-            }
-        }
-
-        return config;
-    }
-
-    public static ClientConfig FromCompactArgs(String arg) {
+    public static AdminConsoleConfig FromCompactArgs(String arg) {
         // Form : COMPACT_KEY=HOSTNAME:PORT
         String dataString = arg.substring(ARG_COMPACT_KEY.length());
 
         int separator = dataString.indexOf(':');
         if (separator == -1) {
-            throw new IllegalArgumentException("Bad format for client argument arg=" + arg);
+            throw new IllegalArgumentException("Bad format for admin console argument arg=" + arg);
         }
 
-        ClientConfig config = new ClientConfig();
+        AdminConsoleConfig config = new AdminConsoleConfig();
         try {
             config.setServerHostname(dataString.substring(0, separator));
             config.setServerPort(Integer.parseInt(dataString.substring(separator + 1)));
 
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid format for client argument arg=" + arg);
+            throw new IllegalArgumentException("Invalid format for admin console argument arg=" + arg);
         }
         return config;
     }
 
-    public ArrayList<String> toArgs() {
-        ArrayList<String> args = new ArrayList<>();
-        args.add(ARG_SERVER_HOSTNAME_KEY +  serverHostname);
-        args.add(ARG_SERVER_PORT_KEY + serverPort);
-        return args;
+    public String toCompactArgs() {
+        return ARG_COMPACT_KEY + serverHostname + ":" + serverPort;
     }
 
     public String getServerHostname() {
@@ -110,10 +80,9 @@ public class ClientConfig {
 
     @Override
     public String toString() {
-        return "ClientConfig{" +
+        return "AdminConsoleConfig{" +
                 "serverHostname='" + serverHostname + '\'' +
                 ", serverPort=" + serverPort +
                 '}';
     }
-
 }

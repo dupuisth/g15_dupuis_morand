@@ -1,6 +1,7 @@
 package com.gr15.server;
 
 import com.gr15.common.Constants;
+import com.gr15.server.managers.AdminManager;
 import com.gr15.server.managers.ClientManager;
 import com.gr15.server.managers.ServerManager;
 import com.gr15.utils.Logger;
@@ -16,6 +17,7 @@ public class ServerApp {
 
     private final ClientManager clientManager;
     private final ServerManager serverManager;
+    private final AdminManager adminManager;
 
 
     public ServerApp(ServerConfig initialConfig) {
@@ -30,6 +32,7 @@ public class ServerApp {
 
         clientManager = new ClientManager(this);
         serverManager = new ServerManager(this);
+        adminManager = new AdminManager(this);
     }
 
     public void run() {
@@ -50,19 +53,30 @@ public class ServerApp {
             return;
         }
 
+        try {
+            adminManager.start();
+        } catch (RuntimeException e) {
+            Logger.error("Failed to start the admin manager", e);
+            clientManager.stop();
+            serverManager.stop();
+            return;
+        }
+
         // Keep alive
         while (!isStopping) {
             ThreadUtils.safeSleep(Constants.SERVER_POLL_DELAY_MS);
 
             clientManager.pollEvents();
             serverManager.pollEvents();
+            adminManager.pollEvents();
         }
 
         clientManager.stop();
         serverManager.stop();
+        adminManager.stop();
     }
 
-    public void stop() {
+    public void setShouldStop() {
         Logger.debug("Stop received");
         isStopping = true;
     }

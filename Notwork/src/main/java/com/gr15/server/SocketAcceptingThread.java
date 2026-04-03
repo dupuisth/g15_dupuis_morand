@@ -23,7 +23,7 @@ public class SocketAcceptingThread extends Thread {
     /**
      * If the thread should stop
      */
-    private boolean shouldStop = false;
+    private volatile boolean shouldStop = false;
 
     public SocketAcceptingThread(ServerSocket serverSocket, SocketHandler handler) {
         this.serverSocket = serverSocket;
@@ -42,6 +42,8 @@ public class SocketAcceptingThread extends Thread {
                 Logger.error("Exception while accepting socket from serverSocket=" + serverSocket.getInetAddress(), e);
             }
         }
+
+        Logger.info("Stopped socket accepting thread");
     }
 
     public void setShouldStop() {
