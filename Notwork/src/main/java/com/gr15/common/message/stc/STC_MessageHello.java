@@ -8,7 +8,7 @@ import static com.gr15.common.Constants.*;
 public class STC_MessageHello {
     public static final int ID = MessageSTC.HELLO.getId();
 
-    private final String welcomeMessage;
+    public final String welcomeMessage;
     private final int clientId;
 
     private STC_MessageHello(int clientId, String welcomeMessage) {

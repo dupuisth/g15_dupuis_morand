@@ -1,6 +1,5 @@
 package com.gr15.server.managers;
 
-import com.gr15.common.Constants;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.BroadcastId;
@@ -10,14 +9,12 @@ import com.gr15.common.message.sts.MessageSTS;
 import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.common.message.sts.STS_Identify;
 import com.gr15.server.ServerApp;
-import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.ServerConnection;
-import com.gr15.server.connections.ServerWrapper;
+import com.gr15.server.wrappers.ServerWrapper;
 import static com.gr15.common.Constants.*;
 
 import com.gr15.server.handlers.ServerHandler;
 import com.gr15.utils.Logger;
-import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -29,8 +26,6 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     /** Array of all the servers connected (index => serverId) */
     private final ServerWrapper[] connectionsToServer = new ServerWrapper[MAX_SERVERS];
     private final ArrayList<ServerWrapper> pendingAuthentification = new ArrayList<>();
-
-    private final Object connectionsLock = new Object();
 
     private final Queue<ServerConnection> connectionsToRemoveQueue = new LinkedList<>();
     private final Queue<MessageReceived> messageReceivedQueue = new LinkedList<>();
@@ -64,6 +59,15 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                 connectToNeighborThread.join(1000);
             } catch (InterruptedException e) {
                 Logger.error("Exception while trying waiting for connectToNeighborThread ending", e);
+            }
+        }
+
+        // Force stop directly
+        synchronized (getConnectionsLock()) {
+            for (int i = connectionsToServer.length - 1; i >= 0 ; i--) {
+                if (connectionsToServer[i] != null) {
+                    stopConnection(connectionsToServer[i].getConnection());
+                }
             }
         }
     }
@@ -393,6 +397,18 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         return broadcastId;
     }
 
+    public void reset() {
+        synchronized (getConnectionsLock()) {
+            synchronized (connectionsToRemoveQueue) {
+                for (int i = 0; i < MAX_CLIENTS; i++) {
+                    if (connectionsToServer[i] != null) {
+                        connectionsToRemoveQueue.add(connectionsToServer[i].getConnection());
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     public int getPort() {
         return server.getInitialConfig().getServerSocketPort();
@@ -400,12 +416,38 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
     @Override
     public Object getConnectionsLock() {
-        return connectionsLock;
+        return connectionsToServer;
     }
 
     @Override
     public ServerWrapper[] getConnections() {
         return connectionsToServer;
+    }
+
+    public ArrayList<ServerWrapper> getPendingAuthentificationConnections() {
+        return pendingAuthentification;
+    }
+
+    /**
+     * Return all current connections (pending authentification and fully initialized)
+     */
+    public ArrayList<ServerConnection> getAllConnections() {
+        ArrayList<ServerConnection> allConnections = new ArrayList<>();
+
+        synchronized (getConnectionsLock()) {
+            for (ServerWrapper wrapper : connectionsToServer) {
+                if (wrapper == null || wrapper.getConnection() == null) continue;
+                allConnections.add(wrapper.getConnection());
+            }
+        }
+
+        synchronized (pendingAuthentification) {
+            for (ServerWrapper wrapper : pendingAuthentification) {
+                allConnections.add(wrapper.getConnection());
+            }
+        }
+
+        return allConnections;
     }
 
     public record MessageReceived(ServerConnection connection, Message message) { }
