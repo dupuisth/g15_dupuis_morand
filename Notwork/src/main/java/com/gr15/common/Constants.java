@@ -14,6 +14,9 @@ public class Constants {
     // Calculate the max servers on the network from the SERVER_ID_BITS
     public static final int MAX_SERVERS = Math.powExact(2, SERVER_ID_BITS);
 
+    // Arbitrary
+    public static final int MAX_ADMINS = 1;
+
     public static final int BROADCAST_ID_SERVER_BITS = SERVER_ID_BITS;
     public static final int BROADCAST_ID_LOCAL_BITS = 16;
     public static final int BROADCAST_ID_TOTAL_BITS = BROADCAST_ID_SERVER_BITS + BROADCAST_ID_LOCAL_BITS;
@@ -24,6 +27,6 @@ public class Constants {
     public static final int TTL_MAX_VALUE = Math.powExact(2, TTL_BITS) - 1;
     public static final int TTL_DEFAULT_VALUE = TTL_MAX_VALUE;
 
-    public static final int SERVER_POLL_RATE = 1;
+    public static final int SERVER_POLL_RATE = 20;
     public static final int SERVER_POLL_DELAY_MS = 1000 / SERVER_POLL_RATE;
 }

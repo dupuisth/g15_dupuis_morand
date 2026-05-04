@@ -12,7 +12,7 @@ import java.util.List;
 
 public class ServerManager {
 
-    private final List<Process> servers;
+    private final List<ServerConfig> servers;
 
     public ServerManager() {
         servers = new ArrayList<>();
@@ -25,22 +25,15 @@ public class ServerManager {
 
         try {
             Process process = ProcessUtils.startApplicationInNewTerminal(arguments);
-            servers.add(process);
+            servers.add(config);
             Logger.info("Created a new process");
         } catch (IOException e) {
             Logger.warn("Failed to create the client process");
         }
     }
 
-    /**
-     * Return a COPY of the servers list (this copy is only valid for a short period, any modifications on the real list will not propagate to this one
-     */
-    public List<Process> getServers() {
-        // Create a copy, so that we prevent all async errors
-        List<Process> result;
-        synchronized (servers) {
-            result = new ArrayList<>(servers);
-        }
-        return result;
+
+    public List<ServerConfig> getServers() {
+        return servers;
     }
 }

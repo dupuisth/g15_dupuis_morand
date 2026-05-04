@@ -3,13 +3,14 @@ package com.gr15.server.managers;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.ServerConnection;
-import com.gr15.server.connections.ServerWrapper;
+import com.gr15.server.wrappers.ServerWrapper;
 import com.gr15.server.handlers.ServerHandler;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 import static com.gr15.common.Constants.SERVER_POLL_DELAY_MS;
@@ -36,18 +37,26 @@ public class ServerConnectToNeighborThread extends Thread {
 
             if (pause) continue;
 
-            Set<Integer> serverIds = serverManager.getServerIds();
+            ArrayList<ServerConnection> connections = serverManager.getAllConnections();
 
-            ArrayList<ServerConfig.NeighborServerInfo> notConnected = new ArrayList<>();
+            Set<ServerConfig.NeighborServerInfo> notConnected = new HashSet<>();
             for (ServerConfig.NeighborServerInfo neighborServerInfo : serverManager.server.getInitialConfig().getNeighbors()) {
-                if (!serverIds.contains(neighborServerInfo.getServerId())) {
-                    notConnected.add(neighborServerInfo);
+                boolean found = false;
+                for (ServerConnection connection : connections) {
+                    // Check if we are already connected
+                    if ((neighborServerInfo.getServerId() != null && neighborServerInfo.getServerId().equals(connection.getServerId()))
+                            || (neighborServerInfo.getServerHostname().equals(connection.getHostname()) && neighborServerInfo.getServerPort() == connection.getPort())) {
+                        found = true;
+                        break;
+                    }
                 }
+                if (found) continue;
+                notConnected.add(neighborServerInfo);
             }
 
             for (ServerConfig.NeighborServerInfo info : notConnected) {
                 // The lower serverId should initiate the connection
-                if (info.getServerId() < serverManager.server.getInitialConfig().getServerId()) continue;
+                if (info.getServerId() != null && info.getServerId() < serverManager.server.getInitialConfig().getServerId()) continue;
 
 
                 ServerConnection serverConnection;
@@ -62,24 +71,32 @@ public class ServerConnectToNeighborThread extends Thread {
                 ListeningThread<ServerConnection> listener = new ListeningThread<>(serverConnection, serverManager::onMessageRead, serverManager::onListeningError);
                 ServerWrapper wrapper = new ServerWrapper(serverConnection, listener, handler);
 
-                synchronized (serverManager.getConnectionsLock()) {
-                    ServerWrapper currentWrapper = serverManager.getConnections()[info.getServerId()];
-                    if (currentWrapper != null) {
-                        if (currentWrapper.getConnection() == wrapper.getConnection()) {
-                            Logger.info("Already connected to the server " + info);
-                            // OK, already registered, do nothing
-                            continue;
-                        } else {
-                            // Another connection is using the serverId, keep the old one
-                            Logger.warn("Another connection is already using the neighbor serverId, neighbor=" + info + ", parasite=" + currentWrapper.getConnection());
-                            wrapper.getConnection().close();
-                            continue;
+                if (info.getServerId() != null) {
+                    synchronized (serverManager.getConnectionsLock()) {
+                        ServerWrapper currentWrapper = serverManager.getConnections()[info.getServerId()];
+                        if (currentWrapper != null) {
+                            if (currentWrapper.getConnection() == wrapper.getConnection()) {
+                                Logger.info("Already connected to the server " + info);
+                                // OK, already registered, do nothing
+                                continue;
+                            } else {
+                                // Another connection is using the serverId, keep the old one
+                                Logger.warn("Another connection is already using the neighbor serverId, neighbor=" + info + ", parasite=" + currentWrapper.getConnection());
+                                wrapper.getConnection().close();
+                                continue;
+                            }
                         }
-                    }
 
-                    // Else, add it
-                    serverManager.getConnections()[info.getServerId()] = wrapper;
+                        // Else, add it
+                        serverManager.getConnections()[info.getServerId()] = wrapper;
+                    }
+                } else {
+                    synchronized (serverManager.getPendingAuthentificationConnections()) {
+                        serverManager.getPendingAuthentificationConnections().add(wrapper);
+                    }
                 }
+
+
 
                 handler.start();
                 listener.start();

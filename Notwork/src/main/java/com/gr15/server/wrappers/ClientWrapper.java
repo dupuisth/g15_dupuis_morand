@@ -1,6 +1,7 @@
-package com.gr15.server.connections;
+package com.gr15.server.wrappers;
 
 import com.gr15.common.listening.ListeningThread;
+import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.handlers.ClientHandler;
 
 public final class ClientWrapper extends ConnectionWrapper<ClientConnection> {

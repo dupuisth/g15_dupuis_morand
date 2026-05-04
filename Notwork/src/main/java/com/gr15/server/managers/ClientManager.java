@@ -1,7 +1,6 @@
 package com.gr15.server.managers;
 
 import com.gr15.common.ClientId;
-import com.gr15.common.Constants;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.cts.CTS_Message;
@@ -12,8 +11,7 @@ import com.gr15.common.message.sts.BroadcastData;
 import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
-import com.gr15.server.connections.ClientWrapper;
-import com.gr15.server.connections.ServerWrapper;
+import com.gr15.server.wrappers.ClientWrapper;
 import com.gr15.server.handlers.ClientHandler;
 import com.gr15.utils.Logger;
 import static com.gr15.common.Constants.*;
@@ -21,10 +19,7 @@ import static com.gr15.common.Constants.*;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     /** Array of all the clients connected (index => localId) */
@@ -277,6 +272,32 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
         }
 
         throw new RuntimeException("No more space in the network !");
+    }
+
+    public void reset() {
+        synchronized (getConnectionsLock()) {
+            synchronized (connectionsToRemoveQueue) {
+                for (int i = 0; i < MAX_CLIENTS; i++) {
+                    if (connectionsToClient[i] != null) {
+                        connectionsToRemoveQueue.add(connectionsToClient[i].getConnection());
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        
+        // Force stop directly
+        synchronized (getConnectionsLock()) {
+            for (int i = connectionsToClient.length - 1; i >= 0 ; i--) {
+                if (connectionsToClient[i] != null) {
+                    stopConnection(connectionsToClient[i].getConnection());
+                }
+            }
+        }
     }
 
     @Override
