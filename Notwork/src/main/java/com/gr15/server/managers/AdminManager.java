@@ -169,6 +169,7 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
                 Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
             case LIST_NEIGHBORS -> {
+                // TODO: Do this later
             }
             case ADD_NEIGHBOR -> {
                 handleMessage(fromAdmin, ATS_AddNeighbor.ReadMessage(message));
