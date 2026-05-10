@@ -4,7 +4,7 @@ package com.gr15.common.message.ats;
  * Type of messages Admin -> Server
  */
 public enum MessageATS {
-    LIST_NEIGHBORS(0),
+    LIST_NEIGHBOR(0),
     ADD_NEIGHBOR(1),
     REMOVE_NEIGHBOR(2),
     STOP(3),

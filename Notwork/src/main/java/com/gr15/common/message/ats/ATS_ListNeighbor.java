@@ -3,7 +3,7 @@ package com.gr15.common.message.ats;
 import com.gr15.common.Message;
 
 public class ATS_ListNeighbor {
-    public static final int ID = MessageATS.LIST_NEIGHBORS.getId();
+    public static final int ID = MessageATS.LIST_NEIGHBOR.getId();
 
     private ATS_ListNeighbor() { }
 

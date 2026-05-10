@@ -6,6 +6,7 @@ import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.ats.*;
 import com.gr15.common.message.sta.MessageSTA;
+import com.gr15.common.message.sta.STA_ListNeighbor;
 import com.gr15.common.message.stc.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
@@ -14,13 +15,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class AdminConsole {
+    private static final int RESPONSE_TIMEOUT_SECONDS = 5;
+
     private AdminConsoleConfig config;
 
     private Connection connection;
 
     private int clientId;
+
+    private final BlockingQueue<Message> receivedMessages = new LinkedBlockingQueue<>();
 
     public AdminConsole(AdminConsoleConfig config) {
         this.config = config;
@@ -75,8 +83,11 @@ public class AdminConsole {
 
             switch (action) {
                 case null -> {}
-                case LIST_NEIGHBORS -> {
-                    // To implement later
+                case LIST_NEIGHBOR -> {
+                    receivedMessages.clear();
+                    if (connection.safeSend(ATS_ListNeighbor.CreateMessage())) {
+                        waitAndHandleResponse();
+                    }
                 }
                 case ADD_NEIGHBOR -> {
                     String hostname = CliHelper.inputString("Hostname", 0, 0);
@@ -119,7 +130,25 @@ public class AdminConsole {
 
     public void onMessageReceived(Connection connection, Message message) {
         Logger.debug("New message received : length=" + message.getData().length + " data=" + message.getDataAsBitsInString());
+        receivedMessages.add(message);
+    }
 
+    private void waitAndHandleResponse() {
+        try {
+            Message message = receivedMessages.poll(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (message == null) {
+                CliHelper.show("No response received from server.");
+                return;
+            }
+
+            handleResponse(message);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            CliHelper.show("Interrupted while waiting for server response.");
+        }
+    }
+
+    private void handleResponse(Message message) {
         // Read the message header
         int messageId = message.readInt(Message.MESSAGE_ID_BITS);
         MessageSTA messageType = MessageSTA.fromId(messageId);
@@ -130,6 +159,20 @@ public class AdminConsole {
                 Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
             case LIST_NEIGHBOR -> {
+                STA_ListNeighbor listNeighbor = STA_ListNeighbor.ReadMessage(message);
+                List<STA_ListNeighbor.NeighborInfo> neighbors = listNeighbor.getNeighbors();
+                if (neighbors.isEmpty()) {
+                    CliHelper.show("No neighbors configured.");
+                    return;
+                }
+
+                CliHelper.show("Configured neighbors:");
+                for (STA_ListNeighbor.NeighborInfo neighbor : neighbors) {
+                    String serverId = neighbor.serverId() == null ? "unknown" : neighbor.serverId().toString();
+                    CliHelper.show("- serverId=" + serverId
+                            + " hostname=" + neighbor.serverHostname()
+                            + " port=" + neighbor.serverPort());
+                }
             }
         }
     }

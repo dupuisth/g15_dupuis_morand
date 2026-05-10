@@ -387,7 +387,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         int localId;
         synchronized (currentLocalBroadcastIdLock) {
             localId = currentLocalBroadcastId++;
-            if (currentLocalBroadcastId > Math.powExact(2, BROADCAST_ID_LOCAL_BITS) - 1) {
+            if (currentLocalBroadcastId > (1 << BROADCAST_ID_LOCAL_BITS) - 1) {
                 currentLocalBroadcastId = 0;
             }
         }
@@ -400,7 +400,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     public void reset() {
         synchronized (getConnectionsLock()) {
             synchronized (connectionsToRemoveQueue) {
-                for (int i = 0; i < MAX_CLIENTS; i++) {
+                for (int i = 0; i < connectionsToServer.length; i++) {
                     if (connectionsToServer[i] != null) {
                         connectionsToRemoveQueue.add(connectionsToServer[i].getConnection());
                     }

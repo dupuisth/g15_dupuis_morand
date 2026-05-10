@@ -32,7 +32,7 @@ public class Application {
         }
     }
 
-    static void main(String[] args) {
+    public static void main(String[] args) {
         // Check the arguments to check if there is any matches
         ApplicationType applicationType = null;
 

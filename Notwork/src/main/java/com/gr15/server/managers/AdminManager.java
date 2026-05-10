@@ -3,6 +3,7 @@ package com.gr15.server.managers;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.ats.*;
+import com.gr15.common.message.sta.STA_ListNeighbor;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.AdminConnection;
@@ -76,6 +77,11 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
                 adminId = nextAdminId();
             } catch (RuntimeException e) {
                 Logger.error("Failed to create new adminId e=" + e.getMessage());
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    Logger.error("Failed to close rejected admin socket", ex);
+                }
                 return;
             }
 
@@ -168,8 +174,8 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
             case null -> {
                 Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
-            case LIST_NEIGHBORS -> {
-                // TODO: Do this later
+            case LIST_NEIGHBOR -> {
+                handleMessage(fromAdmin, ATS_ListNeighbor.ReadMessage(message));
             }
             case ADD_NEIGHBOR -> {
                 handleMessage(fromAdmin, ATS_AddNeighbor.ReadMessage(message));
@@ -204,7 +210,16 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
     }
 
     private void handleMessage(AdminConnection from, ATS_ListNeighbor message) {
-        // Implement later
+        List<STA_ListNeighbor.NeighborInfo> neighbors = new ArrayList<>();
+        for (ServerConfig.NeighborServerInfo neighbor : server.getInitialConfig().getNeighbors()) {
+            neighbors.add(new STA_ListNeighbor.NeighborInfo(
+                    neighbor.getServerId(),
+                    neighbor.getServerHostname(),
+                    neighbor.getServerPort()
+            ));
+        }
+
+        send(from, STA_ListNeighbor.CreateMessage(neighbors));
     }
 
 
@@ -260,7 +275,7 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
     }
     
     private int nextAdminId() {
-        synchronized (connectionsToAdmin) {
+        synchronized (getConnectionsLock()) {
             for (int i = 0; i < MAX_ADMINS; i++) {
                 if (connectionsToAdmin[i] == null) {
                     return i;

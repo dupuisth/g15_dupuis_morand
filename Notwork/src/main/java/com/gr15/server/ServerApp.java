@@ -20,6 +20,7 @@ public class ServerApp {
     private final AdminManager adminManager;
 
 
+    @SuppressWarnings("this-escape")
     public ServerApp(ServerConfig initialConfig) {
         this.initialConfig = initialConfig;
 

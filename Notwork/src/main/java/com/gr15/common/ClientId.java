@@ -20,7 +20,7 @@ public class ClientId {
     }
 
     public static int GetServerId(int clientId) {
-        return clientId >> SERVER_ID_BITS;
+        return clientId >> LOCAL_ID_BITS;
     }
 
     public static int GetLocalId(int clientId) {

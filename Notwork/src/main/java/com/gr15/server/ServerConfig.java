@@ -105,7 +105,7 @@ public class ServerConfig {
                 return false;
             }
 
-            if (neighbor.getServerId() < 0 || neighbor.getServerId() >= MAX_SERVERS) {
+            if (neighbor.getServerId() == null || neighbor.getServerId() < 0 || neighbor.getServerId() >= MAX_SERVERS) {
                 return false;
             }
 

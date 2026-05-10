@@ -37,17 +37,21 @@ public abstract class RemoteConnection {
         this.out = null;
 
         if (connectInstantly) {
-            connect();
+            openSocket();
         }
     }
 
-    public synchronized void connect() throws IOException {
+    public final synchronized void connect() throws IOException {
         if (isConnected()) {
             Logger.warn("Connection is already running");
             return;
         }
 
         Logger.info("Connecting to " + hostname + ":" + port);
+        openSocket();
+    }
+
+    private void openSocket() throws IOException {
         this.socket = new Socket(hostname, port);
         bindStreams();
     }
@@ -95,6 +99,9 @@ public abstract class RemoteConnection {
         synchronized (readLock) {
             // Read the length
             int length = in.readInt();
+            if (length <= 0 || length > Message.MAX_SIZE_BYTES) {
+                throw new IOException("Invalid message length: " + length);
+            }
 
             // Read the message
             byte[] messageBytes = new byte[length];

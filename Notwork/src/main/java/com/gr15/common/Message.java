@@ -1,18 +1,12 @@
 package com.gr15.common;
 
 import com.gr15.utils.BitmaskUtils;
-import com.gr15.utils.Logger;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 // Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
 
-public class Message {
+public final class Message {
 
     // Length
     public static final int MESSAGE_ID_BITS = 4;
@@ -94,7 +88,12 @@ public class Message {
      * @param writeLength if the length of the byte array should be written before
      */
     public void addBytes(byte[] bytes, boolean writeLength) {
-        if (bytes.length * Converter.BITS_PER_BYTE > getUnwrittenBits()) {
+        int requiredBits = bytes.length * Converter.BITS_PER_BYTE;
+        if (writeLength) {
+            requiredBits += Converter.BITS_PER_INTEGER;
+        }
+
+        if (requiredBits > getUnwrittenBits()) {
             throw new RuntimeException("Message will be too big !");
         }
 
@@ -173,6 +172,9 @@ public class Message {
      */
     public byte[] readBytesWithLength() {
         int length = readInt(Converter.BITS_PER_INTEGER);
+        if (length < 0 || length * Converter.BITS_PER_BYTE > getUnreadenBits()) {
+            throw new IllegalArgumentException("Invalid byte array length: " + length);
+        }
 
         byte[] bytes = new byte[length];
         for (int i = 0; i < length; i++) {
