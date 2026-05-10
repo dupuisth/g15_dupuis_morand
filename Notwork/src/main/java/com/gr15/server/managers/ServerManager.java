@@ -12,6 +12,8 @@ import com.gr15.common.message.sts.BroadcastData;
 import com.gr15.common.message.sts.MessageSTS;
 import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.common.message.sts.STS_Identify;
+import com.gr15.common.message.sts.STS_Ping;
+import com.gr15.common.message.sts.STS_Pong;
 import com.gr15.common.message.sts.STS_RoutedError;
 import com.gr15.common.message.sts.STS_RoutedMessage;
 import com.gr15.common.message.sts.STS_RoutingUpdate;
@@ -253,6 +255,14 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                 STS_RoutedError parsed = STS_RoutedError.ReadMessage(message);
                 handleMessage(fromServer, parsed);
             }
+            case PING -> {
+                STS_Ping parsed = STS_Ping.ReadMessage(message);
+                handleMessage(fromServer, parsed);
+            }
+            case PONG -> {
+                STS_Pong parsed = STS_Pong.ReadMessage(message);
+                handleMessage(fromServer, parsed);
+            }
         }
     }
 
@@ -376,6 +386,15 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
                 routedError.getDestinationClientId(),
                 routedError.getErrorMessage()
         ));
+    }
+
+    private void handleMessage(ServerConnection fromServer, STS_Ping ping) {
+        Logger.debug("Received " + ping + " from " + fromServer);
+        send(fromServer, STS_Pong.CreateMessage());
+    }
+
+    private void handleMessage(ServerConnection fromServer, STS_Pong pong) {
+        Logger.debug("Received " + pong + " from " + fromServer);
     }
 
     private void handleMessage(ServerConnection fromServer, STS_RoutingUpdate routingUpdate) {

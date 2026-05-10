@@ -33,4 +33,5 @@ public class Constants {
     public static final int SERVER_POLL_DELAY_MS = 1000 / SERVER_POLL_RATE;
 
     public static final int CLIENT_PING_INTERVAL_MS = 5000;
+    public static final int SERVER_PING_INTERVAL_MS = 5000;
 }

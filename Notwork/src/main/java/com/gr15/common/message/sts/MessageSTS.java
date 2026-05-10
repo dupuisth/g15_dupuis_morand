@@ -9,7 +9,9 @@ public enum MessageSTS {
     BROADCAST_CHAT(2),
     ROUTED_MESSAGE(3),
     ROUTING_UPDATE(4),
-    ROUTED_ERROR(5);
+    ROUTED_ERROR(5),
+    PING(6),
+    PONG(7);
 
     private final int val;
 

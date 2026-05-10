@@ -2,6 +2,7 @@ package com.gr15.server.handlers;
 
 import com.gr15.common.Constants;
 import com.gr15.common.message.sts.STS_Identify;
+import com.gr15.common.message.sts.STS_Ping;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.ServerConnection;
@@ -30,15 +31,14 @@ public class ServerHandler extends Thread {
     public void run() {
         super.run();
 
-        // Do something later on, maybe implement the ping-pong stuff...
         while (!shouldStop && serverConnection.isConnected()) {
-            // If the server is not identified, then try to get it
             if (serverConnection.getServerId() == null) {
                 server.getServerManager().send(serverConnection, STS_Identify.CreateMessage(server.getInitialConfig().getServerId(), 0));
+            } else {
+                server.getServerManager().send(serverConnection, STS_Ping.CreateMessage());
             }
 
-
-            int sleepTime = Math.max(2 * Constants.SERVER_POLL_DELAY_MS, 5000);
+            int sleepTime = Math.max(2 * Constants.SERVER_POLL_DELAY_MS, Constants.SERVER_PING_INTERVAL_MS);
             if (!ThreadUtils.safeSleep(sleepTime)) {
                 break;
             }
