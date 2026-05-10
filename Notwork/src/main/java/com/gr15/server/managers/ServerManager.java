@@ -17,6 +17,8 @@ import com.gr15.common.message.sts.STS_RoutedMessage;
 import com.gr15.common.message.sts.STS_RoutingUpdate;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ServerConnection;
+import com.gr15.server.routing.RoutingSnapshot;
+import com.gr15.server.routing.RoutingTable;
 import com.gr15.server.wrappers.ServerWrapper;
 import static com.gr15.common.Constants.*;
 
@@ -42,23 +44,13 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private int currentLocalBroadcastId = 0;
     private final Object currentLocalBroadcastIdLock = new Object();
 
-    private final Object routingLock = new Object();
-    private final Map<Integer, Set<Integer>> topology = new HashMap<>();
-    private final Map<Integer, Set<Integer>> clientsByServer = new HashMap<>();
-    private final Map<Integer, Integer> lastRoutingSequenceByServer = new HashMap<>();
-    private final Map<Integer, RoutingSnapshot> routingSnapshotsByServer = new HashMap<>();
-    private int currentLocalRoutingSequence = 0;
+    private final RoutingTable routingTable;
 
     ServerConnectToNeighborThread connectToNeighborThread;
 
     public ServerManager(ServerApp server) {
         super(server);
-        synchronized (routingLock) {
-            topology.put(server.getInitialConfig().getServerId(), new HashSet<>());
-            clientsByServer.put(server.getInitialConfig().getServerId(), new HashSet<>());
-            lastRoutingSequenceByServer.put(server.getInitialConfig().getServerId(), -1);
-            routingSnapshotsByServer.put(server.getInitialConfig().getServerId(), new RoutingSnapshot(server.getInitialConfig().getServerId(), -1, 0, 0));
-        }
+        routingTable = new RoutingTable(server.getInitialConfig().getServerId());
     }
 
     @Override
@@ -267,7 +259,29 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     private void handleMessage(ServerConnection fromServer, STS_Identify identify) {
         Logger.info("Received identify " + identify);
 
-        // Register the identity
+        if (identify.getFromServerId() < 0 || identify.getFromServerId() >= MAX_SERVERS) {
+            Logger.warn("Received invalid server identity: " + identify.getFromServerId());
+            stopConnection(fromServer);
+            return;
+        }
+
+        if (identify.getFromServerId() == server.getInitialConfig().getServerId()) {
+            Logger.warn("Rejected self server connection");
+            stopConnection(fromServer);
+            return;
+        }
+
+        ServerWrapper existingWrapper;
+        synchronized (getConnectionsLock()) {
+            existingWrapper = connectionsToServer[identify.getFromServerId()];
+        }
+
+        if (existingWrapper != null && existingWrapper.getConnection() != fromServer) {
+            Logger.warn("Rejected duplicate connection for serverId=" + identify.getFromServerId());
+            stopConnection(fromServer);
+            return;
+        }
+
         fromServer.setServerId(identify.getFromServerId());
 
         ServerWrapper pendingWrapper = null;
@@ -387,7 +401,7 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
             return server.getClientManager().sendClientMessage(fromClientId, destinationClientId, content);
         }
 
-        if (!isKnownClient(destinationClientId)) {
+        if (!routingTable.isKnownClient(destinationClientId)) {
             return false;
         }
 
@@ -417,16 +431,8 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         return true;
     }
 
-    private boolean isKnownClient(int clientId) {
-        int serverId = ClientId.GetServerId(clientId);
-        synchronized (routingLock) {
-            Set<Integer> clients = clientsByServer.get(serverId);
-            return clients != null && clients.contains(clientId);
-        }
-    }
-
     private ServerConnection getNextHopConnection(int destinationServerId) {
-        Integer nextHopServerId = getNextHopServerId(destinationServerId);
+        Integer nextHopServerId = routingTable.getNextHopServerId(destinationServerId);
         if (nextHopServerId == null) {
             return null;
         }
@@ -440,134 +446,32 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
         }
     }
 
-    private Integer getNextHopServerId(int destinationServerId) {
-        int localServerId = server.getInitialConfig().getServerId();
-        if (destinationServerId == localServerId) {
-            return localServerId;
-        }
-
-        synchronized (routingLock) {
-            Queue<RouteStep> queue = new LinkedList<>();
-            Set<Integer> visited = new HashSet<>();
-
-            visited.add(localServerId);
-            for (Integer neighborId : getSortedNeighbors(localServerId)) {
-                if (!visited.add(neighborId)) {
-                    continue;
-                }
-                queue.add(new RouteStep(neighborId, neighborId));
-            }
-
-            while (!queue.isEmpty()) {
-                RouteStep current = queue.poll();
-                if (current.serverId() == destinationServerId) {
-                    return current.firstHopServerId();
-                }
-
-                for (Integer neighborId : getSortedNeighbors(current.serverId())) {
-                    if (!visited.add(neighborId)) {
-                        continue;
-                    }
-                    queue.add(new RouteStep(neighborId, current.firstHopServerId()));
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private List<Integer> getSortedNeighbors(int serverId) {
-        Set<Integer> neighbors = topology.get(serverId);
-        if (neighbors == null) {
-            return Collections.emptyList();
-        }
-
-        ArrayList<Integer> sorted = new ArrayList<>(neighbors);
-        Collections.sort(sorted);
-        return sorted;
-    }
-
     public void publishLocalRoutingUpdate() {
         int localServerId = server.getInitialConfig().getServerId();
-        int sequence;
         int clientMask = server.getClientManager().getLocalClientMask();
         int neighborMask = getConnectedNeighborMask();
-
-        synchronized (routingLock) {
-            sequence = currentLocalRoutingSequence++;
-            if (currentLocalRoutingSequence >= (1 << ROUTING_SEQUENCE_BITS)) {
-                currentLocalRoutingSequence = 0;
-            }
-
-            lastRoutingSequenceByServer.put(localServerId, sequence);
-            topology.put(localServerId, serverIdsFromMask(neighborMask));
-            clientsByServer.put(localServerId, new HashSet<>(server.getClientManager().getLocalClientIds()));
-            routingSnapshotsByServer.put(localServerId, new RoutingSnapshot(localServerId, sequence, clientMask, neighborMask));
-        }
-
-        sendToAll(STS_RoutingUpdate.CreateMessage(localServerId, sequence, clientMask, neighborMask));
+        RoutingSnapshot snapshot = routingTable.updateLocal(server.getClientManager().getLocalClientIds(), clientMask, neighborMask);
+        sendToAll(STS_RoutingUpdate.CreateMessage(localServerId, snapshot.sequence(), clientMask, neighborMask));
     }
 
     public Set<Integer> getKnownClientIds() {
-        Set<Integer> allClients = new HashSet<>();
-        synchronized (routingLock) {
-            for (Set<Integer> clients : clientsByServer.values()) {
-                allClients.addAll(clients);
-            }
-        }
+        Set<Integer> allClients = routingTable.getKnownClientIds();
         allClients.addAll(server.getClientManager().getLocalClientIds());
         return allClients;
     }
 
     private boolean applyRoutingUpdate(STS_RoutingUpdate routingUpdate) {
-        Set<Integer> previousClients;
-        Set<Integer> nextClients = routingUpdate.getClientIds();
-
-        synchronized (routingLock) {
-            Integer previousSequence = lastRoutingSequenceByServer.get(routingUpdate.getOriginServerId());
-            if (previousSequence != null && !isNewRoutingSequence(previousSequence, routingUpdate.getSequence())) {
-                return false;
-            }
-
-            lastRoutingSequenceByServer.put(routingUpdate.getOriginServerId(), routingUpdate.getSequence());
-            topology.put(routingUpdate.getOriginServerId(), routingUpdate.getNeighborServerIds());
-            routingSnapshotsByServer.put(routingUpdate.getOriginServerId(), new RoutingSnapshot(
-                    routingUpdate.getOriginServerId(),
-                    routingUpdate.getSequence(),
-                    routingUpdate.getClientMask(),
-                    routingUpdate.getNeighborMask()
-            ));
-            previousClients = clientsByServer.get(routingUpdate.getOriginServerId());
-            if (previousClients == null) {
-                previousClients = Collections.emptySet();
-            }
-            clientsByServer.put(routingUpdate.getOriginServerId(), nextClients);
+        RoutingTable.RoutingChange change = routingTable.applyRemoteUpdate(routingUpdate);
+        if (!change.accepted()) {
+            return false;
         }
 
-        notifyLocalClientsOfClientChanges(previousClients, nextClients);
+        notifyLocalClientsOfClientChanges(change.previousClients(), change.nextClients());
         return true;
     }
 
-    private boolean isNewRoutingSequence(int previousSequence, int candidateSequence) {
-        if (previousSequence < 0) {
-            return true;
-        }
-
-        if (candidateSequence > previousSequence) {
-            return true;
-        }
-
-        int maxSequence = 1 << ROUTING_SEQUENCE_BITS;
-        return previousSequence > maxSequence - 100 && candidateSequence < 100;
-    }
-
     private void sendKnownRoutingTable(ServerConnection serverConnection) {
-        ArrayList<RoutingSnapshot> snapshots;
-        synchronized (routingLock) {
-            snapshots = new ArrayList<>(routingSnapshotsByServer.values());
-        }
-
-        for (RoutingSnapshot snapshot : snapshots) {
+        for (RoutingSnapshot snapshot : routingTable.getKnownSnapshots()) {
             if (snapshot.sequence() < 0) {
                 continue;
             }
@@ -605,16 +509,6 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
             }
         }
         return neighborMask;
-    }
-
-    private Set<Integer> serverIdsFromMask(int serverMask) {
-        Set<Integer> serverIds = new HashSet<>();
-        for (int serverId = 0; serverId < MAX_SERVERS; serverId++) {
-            if (((serverMask >> serverId) & 1) == 1) {
-                serverIds.add(serverId);
-            }
-        }
-        return serverIds;
     }
 
     private void handleMessage(ServerConnection fromServer, STS_BroadcastChat broadcastChat) {
@@ -846,6 +740,4 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
     public record MessageReceived(ServerConnection connection, Message message) { }
     public record MessageToSend(ServerConnection connection, Message message) { }
-    private record RouteStep(int serverId, int firstHopServerId) { }
-    private record RoutingSnapshot(int originServerId, int sequence, int clientMask, int neighborMask) { }
 }

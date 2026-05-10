@@ -30,7 +30,7 @@ Backlog derived from `docs/Sujet_Projet_IN363_V4.pdf` and a current code inspect
 - [ ] Implement server liveness checks for both clients and neighbor servers. Current cleanup mostly depends on socket read errors.
 - [ ] Stop routing frames toward clients or servers that fail liveness checks, and notify the rest of the network.
 - [ ] Handle live link changes between servers by updating routing state and propagating the topology change.
-- [ ] Add duplicate-connection handling for identified server connections so a new connection cannot silently overwrite an existing `connectionsToServer[serverId]`.
+- [x] Add duplicate-connection handling for identified server connections so a new connection cannot silently overwrite an existing `connectionsToServer[serverId]`.
 - [ ] Review broadcast TTL handling before reusing it for routing. Current broadcast support prevents loops for chat, but it does not satisfy shortest-path routing.
 
 ## Admin Features
@@ -54,7 +54,7 @@ Backlog derived from `docs/Sujet_Projet_IN363_V4.pdf` and a current code inspect
 
 ## Interoperability Requirements
 
-- [ ] Update server id capacity to match the spec's `S01` to `S32` range. Current `SERVER_ID_BITS = 4` supports only 16 server ids.
+- [x] Update server id capacity to match the spec's `S01` to `S32` range. `SERVER_ID_BITS = 5` supports 32 server ids.
 - [ ] Define how project-local frames map to the future common half-class frame specification.
 - [ ] Add the required "translation" program/layer once the common class specification is known.
 - [ ] Keep compatibility tests or fixtures for local protocol frames and translated common frames.
