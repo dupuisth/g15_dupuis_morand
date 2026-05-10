@@ -1,8 +1,10 @@
 package com.gr15.server.handlers;
 
 import com.gr15.common.Message;
+import com.gr15.common.Constants;
 import com.gr15.common.message.stc.STC_MessageHello;
 import com.gr15.common.message.stc.STC_MessageNewClient;
+import com.gr15.common.message.stc.STC_Ping;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.utils.Logger;
@@ -48,9 +50,16 @@ public class ClientHandler extends Thread {
         server.getClientManager().sendToAll(newClientMessage, clientConnection);
         server.getServerManager().publishLocalRoutingUpdate();
 
-        // Do something later on, maybe implement the ping-pong stuff...
         while (!shouldStop && clientConnection.isConnected()) {
-            if (!ThreadUtils.safeSleep(1000)) {
+            try {
+                clientConnection.send(STC_Ping.CreateMessage());
+            } catch (IOException e) {
+                Logger.warn("Failed to send ping to client " + clientConnection + " e=" + e.getMessage());
+                clientConnection.close();
+                break;
+            }
+
+            if (!ThreadUtils.safeSleep(Constants.CLIENT_PING_INTERVAL_MS)) {
                 break;
             }
         }

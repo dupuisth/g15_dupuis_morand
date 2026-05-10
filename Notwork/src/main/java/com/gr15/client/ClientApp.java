@@ -5,6 +5,7 @@ import com.gr15.common.ClientId;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.Message;
 import com.gr15.common.message.cts.CTS_Message;
+import com.gr15.common.message.cts.CTS_Pong;
 import com.gr15.common.message.stc.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
@@ -142,6 +143,10 @@ public class ClientApp {
                 STC_MessageError parsedMessage = STC_MessageError.ReadMessage(message);
                 handleMessage(parsedMessage);
             }
+            case PING -> {
+                STC_Ping parsedMessage = STC_Ping.ReadMessage(message);
+                handleMessage(parsedMessage);
+            }
         }
     }
 
@@ -183,6 +188,17 @@ public class ClientApp {
         Logger.debug(message.toString());
 
         CliHelper.show("[Server][Error][" + ClientId.toString(message.getDestinationClientId()) + "]: " + message.getErrorMessage());
+    }
+
+    public void handleMessage(STC_Ping message) {
+        Logger.debug(message.toString());
+
+        try {
+            connection.send(CTS_Pong.CreateMessage());
+        } catch (IOException e) {
+            Logger.warn("Failed to send pong to server e=" + e.getMessage());
+            connection.close();
+        }
     }
 
     private Integer parseClientId(String rawValue) {

@@ -4,6 +4,7 @@ import com.gr15.common.ClientId;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.cts.CTS_Message;
+import com.gr15.common.message.cts.CTS_Pong;
 import com.gr15.common.message.cts.MessageCTS;
 import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.stc.STC_Message;
@@ -195,6 +196,10 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
                 CTS_Message parsedMessage = CTS_Message.ReadMessage(message);
                 handleMessage(fromClient, parsedMessage);
             }
+            case PONG -> {
+                CTS_Pong parsedMessage = CTS_Pong.ReadMessage(message);
+                handleMessage(fromClient, parsedMessage);
+            }
             case null -> {
                 Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
@@ -258,6 +263,10 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
         if (!server.getServerManager().routeClientMessage(client.getClientId(), message.getDestinationClientId(), message.getContent())) {
             sendError(client.getClientId(), message.getDestinationClientId(), "Destination unknown or unreachable");
         }
+    }
+
+    private void handleMessage(ClientConnection client, CTS_Pong message) {
+        Logger.debug(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
     }
 
     public boolean sendClientMessage(int fromClientId, int destinationClientId, String content) {

@@ -8,7 +8,8 @@ public enum MessageSTC {
     MESSAGE(1),
     NEW_CLIENT(2),
     REMOVE_CLIENT(3),
-    ERROR(4);
+    ERROR(4),
+    PING(5);
 
     private final int val;
 
