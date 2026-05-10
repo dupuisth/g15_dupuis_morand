@@ -6,7 +6,10 @@ package com.gr15.common.message.sts;
 public enum MessageSTS {
     HELLO(0),
     IDENTIFY(1),
-    BROADCAST_CHAT(2);
+    BROADCAST_CHAT(2),
+    ROUTED_MESSAGE(3),
+    ROUTING_UPDATE(4),
+    ROUTED_ERROR(5);
 
     private final int val;
 

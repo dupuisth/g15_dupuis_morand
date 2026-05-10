@@ -36,9 +36,17 @@ public class ClientHandler extends Thread {
             Logger.warn("Failed to send welcome message e="+e.getMessage());
         }
 
+        for (Integer knownClientId : server.getServerManager().getKnownClientIds()) {
+            if (knownClientId == clientConnection.getClientId()) {
+                continue;
+            }
+            server.getClientManager().send(clientConnection, STC_MessageNewClient.CreateMessage(knownClientId));
+        }
+
         // Send the "NEW_CLIENT" to everyone else
         Message newClientMessage = STC_MessageNewClient.CreateMessage(clientConnection.getClientId());
         server.getClientManager().sendToAll(newClientMessage, clientConnection);
+        server.getServerManager().publishLocalRoutingUpdate();
 
         // Do something later on, maybe implement the ping-pong stuff...
         while (!shouldStop && clientConnection.isConnected()) {

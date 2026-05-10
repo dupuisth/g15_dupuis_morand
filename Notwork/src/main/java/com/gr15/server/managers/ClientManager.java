@@ -5,10 +5,10 @@ import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.cts.CTS_Message;
 import com.gr15.common.message.cts.MessageCTS;
+import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.stc.STC_Message;
+import com.gr15.common.message.stc.STC_MessageError;
 import com.gr15.common.message.stc.STC_MessageRemoveClient;
-import com.gr15.common.message.sts.BroadcastData;
-import com.gr15.common.message.sts.STS_BroadcastChat;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.wrappers.ClientWrapper;
@@ -106,17 +106,19 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
                 return;
             }
 
-            // Create and start the listening thread
+            // Create the listening thread
             ListeningThread<ClientConnection> listeningThread = createDefaultListeningThread(clientConnection);
-            listeningThread.start();
 
-            // Create and start the handler
+            // Create the handler
             ClientHandler clientHandler = new ClientHandler(clientConnection, server);
-            clientHandler.start();
 
-            // Add it to the clients list
+            // Add it to the clients list before the handler announces it to the network.
             ClientWrapper wrapper = new ClientWrapper(clientConnection, listeningThread, clientHandler);
             connectionsToClient[ClientId.GetLocalId(nextClientId)] = wrapper;
+
+            // Then start acting
+            listeningThread.start();
+            clientHandler.start();
         }
 
         Logger.info("Created new client, c=" + ClientId.toString(clientConnection.getClientId()));
@@ -170,6 +172,7 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
 
         // Notify the clients
         send(snapshot, removeMessage);
+        server.getServerManager().publishLocalRoutingUpdate();
     }
 
     @Override
@@ -252,13 +255,93 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     private void handleMessage(ClientConnection client, CTS_Message message) {
         Logger.info(message.toString() + " clientId=" + ClientId.toString(client.getClientId()));
 
-        // Send to all clients except sender
-        Message echoMessage = STC_Message.CreateMessage(client.getClientId(), message.getContent());
-        sendToAll(echoMessage, client);
+        if (!server.getServerManager().routeClientMessage(client.getClientId(), message.getDestinationClientId(), message.getContent())) {
+            sendError(client.getClientId(), message.getDestinationClientId(), "Destination unknown or unreachable");
+        }
+    }
 
-        // Send to all servers
-        Message bridgeMessage = STS_BroadcastChat.CreateMessage(client.getClientId(), message.getContent(), new BroadcastData(TTL_DEFAULT_VALUE, server.getServerManager().getNextBroadcastId()));
-        server.getServerManager().sendToAll(bridgeMessage);
+    public boolean sendClientMessage(int fromClientId, int destinationClientId, String content) {
+        ClientConnection destination = getLocalClientConnection(destinationClientId);
+        if (destination == null) {
+            return false;
+        }
+
+        Message message = STC_Message.CreateMessage(fromClientId, content);
+        send(destination, message);
+        return true;
+    }
+
+    public void sendError(int fromClientId, int destinationClientId, String errorMessage) {
+        ClientConnection sender = getLocalClientConnection(fromClientId);
+        if (sender == null) {
+            return;
+        }
+
+        send(sender, STC_MessageError.CreateMessage(destinationClientId, errorMessage));
+    }
+
+    public ClientConnection getLocalClientConnection(int clientId) {
+        if (ClientId.GetServerId(clientId) != server.getInitialConfig().getServerId()) {
+            return null;
+        }
+
+        int localId = ClientId.GetLocalId(clientId);
+        synchronized (getConnectionsLock()) {
+            ClientWrapper wrapper = connectionsToClient[localId];
+            if (wrapper == null) {
+                return null;
+            }
+
+            return wrapper.getConnection();
+        }
+    }
+
+    public Set<Integer> getLocalClientIds() {
+        Set<Integer> clientIds = new HashSet<>();
+        synchronized (getConnectionsLock()) {
+            for (ClientWrapper wrapper : connectionsToClient) {
+                if (wrapper == null || wrapper.getConnection() == null) {
+                    continue;
+                }
+                clientIds.add(wrapper.getConnection().getClientId());
+            }
+        }
+        return clientIds;
+    }
+
+    public int getLocalClientMask() {
+        int clientMask = 0;
+        synchronized (getConnectionsLock()) {
+            for (ClientWrapper wrapper : connectionsToClient) {
+                if (wrapper == null || wrapper.getConnection() == null) {
+                    continue;
+                }
+                int localId = ClientId.GetLocalId(wrapper.getConnection().getClientId());
+                clientMask |= 1 << localId;
+            }
+        }
+        return clientMask;
+    }
+
+    public List<STA_ListConnections.ConnectionInfo> getConnectionInfos() {
+        List<STA_ListConnections.ConnectionInfo> connections = new ArrayList<>();
+        synchronized (getConnectionsLock()) {
+            for (ClientWrapper wrapper : connectionsToClient) {
+                if (wrapper == null || wrapper.getConnection() == null) {
+                    continue;
+                }
+
+                ClientConnection connection = wrapper.getConnection();
+                connections.add(new STA_ListConnections.ConnectionInfo(
+                        STA_ListConnections.ConnectionType.CLIENT,
+                        connection.getClientId(),
+                        connection.getHostname(),
+                        connection.getPort(),
+                        connection.isConnected()
+                ));
+            }
+        }
+        return connections;
     }
 
     private int getNextClientId() throws RuntimeException{

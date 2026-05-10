@@ -8,7 +8,8 @@ public enum MessageATS {
     ADD_NEIGHBOR(1),
     REMOVE_NEIGHBOR(2),
     STOP(3),
-    RESET(4);
+    RESET(4),
+    LIST_CONNECTIONS(5);
 
 
 

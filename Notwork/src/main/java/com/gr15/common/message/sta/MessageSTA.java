@@ -4,7 +4,8 @@ package com.gr15.common.message.sta;
  * Type of messages Server -> Admin
  */
 public enum MessageSTA {
-    LIST_NEIGHBOR(0);
+    LIST_NEIGHBOR(0),
+    LIST_CONNECTIONS(1);
 
     private final int val;
 

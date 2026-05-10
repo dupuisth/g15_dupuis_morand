@@ -6,6 +6,7 @@ import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.ats.*;
 import com.gr15.common.message.sta.MessageSTA;
+import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.sta.STA_ListNeighbor;
 import com.gr15.common.message.stc.*;
 import com.gr15.utils.Logger;
@@ -105,6 +106,12 @@ public class AdminConsole {
                 case RESET -> {
                     connection.safeSend(ATS_Reset.CreateMessage());
                 }
+                case LIST_CONNECTIONS -> {
+                    receivedMessages.clear();
+                    if (connection.safeSend(ATS_ListConnections.CreateMessage())) {
+                        waitAndHandleResponse();
+                    }
+                }
             }
         }
         Logger.info("Stopping everything");
@@ -174,7 +181,39 @@ public class AdminConsole {
                             + " port=" + neighbor.serverPort());
                 }
             }
+            case LIST_CONNECTIONS -> {
+                STA_ListConnections listConnections = STA_ListConnections.ReadMessage(message);
+                List<STA_ListConnections.ConnectionInfo> connections = listConnections.getConnections();
+                if (connections.isEmpty()) {
+                    CliHelper.show("No active connections.");
+                    return;
+                }
+
+                CliHelper.show("Current connections:");
+                for (STA_ListConnections.ConnectionInfo connection : connections) {
+                    String type = connection.type() == null ? "UNKNOWN" : connection.type().toString();
+                    String id = formatConnectionId(connection);
+                    String status = connection.connected() ? "connected" : "disconnected";
+                    CliHelper.show("- type=" + type
+                            + " id=" + id
+                            + " hostname=" + connection.hostname()
+                            + " port=" + connection.port()
+                            + " status=" + status);
+                }
+            }
         }
+    }
+
+    private String formatConnectionId(STA_ListConnections.ConnectionInfo connection) {
+        if (connection.id() == null) {
+            return "pending";
+        }
+
+        if (connection.type() == STA_ListConnections.ConnectionType.CLIENT) {
+            return ClientId.toString(connection.id());
+        }
+
+        return connection.id().toString();
     }
 
     @Override

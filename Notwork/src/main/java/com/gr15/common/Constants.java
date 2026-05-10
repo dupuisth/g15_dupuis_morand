@@ -27,6 +27,8 @@ public class Constants {
     public static final int TTL_MAX_VALUE = (1 << TTL_BITS) - 1;
     public static final int TTL_DEFAULT_VALUE = TTL_MAX_VALUE;
 
+    public static final int ROUTING_SEQUENCE_BITS = 16;
+
     public static final int SERVER_POLL_RATE = 20;
     public static final int SERVER_POLL_DELAY_MS = 1000 / SERVER_POLL_RATE;
 }

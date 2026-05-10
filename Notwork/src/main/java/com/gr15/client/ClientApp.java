@@ -10,6 +10,10 @@ import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ClientApp {
     private ClientConfig config;
@@ -19,6 +23,7 @@ public class ClientApp {
     private final Thread mainThread;
 
     private int clientId;
+    private final Set<Integer> knownClients = new HashSet<>();
 
     public ClientApp(ClientConfig config) {
         this.config = config;
@@ -63,8 +68,16 @@ public class ClientApp {
             // THIS WILL BLOCK UNTIL THE USER PRESS ENTER, SO, IF A DISCONNECTION HAPPEN
             // THE USER WILL NOT BE NOTIFIED UNTIL THIS END
             // todo: FIX THIS LATER
-            String input = CliHelper.inputString(null, 0, 0);
-            Message message = CTS_Message.CreateMessage(input);
+            showKnownClients();
+            String destinationInput = CliHelper.inputString("Destination client id (<server>:<local> or packed id)", 1, 0);
+            Integer destinationClientId = parseClientId(destinationInput);
+            if (destinationClientId == null) {
+                CliHelper.show("[Client][Error]: Invalid destination client id");
+                continue;
+            }
+
+            String input = CliHelper.inputString("Message", 1, 0);
+            Message message = CTS_Message.CreateMessage(destinationClientId, input);
             try {
                 connection.send(message);
             } catch (IOException e) {
@@ -125,6 +138,10 @@ public class ClientApp {
                 STC_MessageRemoveClient parsedMessage = STC_MessageRemoveClient.ReadMessage(message);
                 handleMessage(parsedMessage);
             }
+            case ERROR -> {
+                STC_MessageError parsedMessage = STC_MessageError.ReadMessage(message);
+                handleMessage(parsedMessage);
+            }
         }
     }
 
@@ -137,20 +154,90 @@ public class ClientApp {
     public void handleMessage(STC_MessageHello message) {
         Logger.debug(message.toString());
         this.clientId = message.getClientId();
+        synchronized (knownClients) {
+            knownClients.add(message.getClientId());
+        }
 
         CliHelper.show("[Server][Welcome]: \"" + message.getWelcomeMessage() + "\", clientId=" + ClientId.toString(message.getClientId()));
     }
 
     public void handleMessage(STC_MessageNewClient message) {
         Logger.debug(message.toString());
+        synchronized (knownClients) {
+            knownClients.add(message.getClientId());
+        }
 
-        CliHelper.show("[Server][NewClient]: clientId=" + message.getClientId());
+        CliHelper.show("[Server][NewClient]: clientId=" + ClientId.toString(message.getClientId()));
     }
 
     public void handleMessage(STC_MessageRemoveClient message) {
         Logger.debug(message.toString());
+        synchronized (knownClients) {
+            knownClients.remove(message.getClientId());
+        }
 
-        CliHelper.show("[Server][RemoveClient]: clientId=" + message.getClientId());
+        CliHelper.show("[Server][RemoveClient]: clientId=" + ClientId.toString(message.getClientId()));
+    }
+
+    public void handleMessage(STC_MessageError message) {
+        Logger.debug(message.toString());
+
+        CliHelper.show("[Server][Error][" + ClientId.toString(message.getDestinationClientId()) + "]: " + message.getErrorMessage());
+    }
+
+    private Integer parseClientId(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+
+        String trimmed = rawValue.trim();
+        if (trimmed.contains(":")) {
+            String[] parts = trimmed.split(":");
+            if (parts.length != 2) {
+                return null;
+            }
+
+            try {
+                int serverId = Integer.parseInt(parts[0]);
+                int localId = Integer.parseInt(parts[1]);
+                return ClientId.Create(serverId, localId);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        try {
+            return Integer.parseInt(trimmed);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private void showKnownClients() {
+        ArrayList<Integer> snapshot;
+        synchronized (knownClients) {
+            snapshot = new ArrayList<>(knownClients);
+        }
+        Collections.sort(snapshot);
+
+        if (snapshot.isEmpty()) {
+            CliHelper.show("[Client][KnownClients]: none yet");
+            return;
+        }
+
+        ArrayList<String> labels = new ArrayList<>();
+        for (Integer knownClientId : snapshot) {
+            if (knownClientId == clientId) {
+                continue;
+            }
+            labels.add(ClientId.toString(knownClientId));
+        }
+
+        if (labels.isEmpty()) {
+            CliHelper.show("[Client][KnownClients]: only you are connected");
+        } else {
+            CliHelper.show("[Client][KnownClients]: " + String.join(", ", labels));
+        }
     }
 
     @Override

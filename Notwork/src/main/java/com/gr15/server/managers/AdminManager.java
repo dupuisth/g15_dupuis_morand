@@ -3,6 +3,7 @@ package com.gr15.server.managers;
 import com.gr15.common.Message;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.ats.*;
+import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.sta.STA_ListNeighbor;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
@@ -189,6 +190,9 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
             case RESET -> {
                 handleMessage(fromAdmin, ATS_Reset.ReadMessage(message));
             }
+            case LIST_CONNECTIONS -> {
+                handleMessage(fromAdmin, ATS_ListConnections.ReadMessage(message));
+            }
         }
     }
 
@@ -220,6 +224,32 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
         }
 
         send(from, STA_ListNeighbor.CreateMessage(neighbors));
+    }
+
+    private void handleMessage(AdminConnection from, ATS_ListConnections message) {
+        List<STA_ListConnections.ConnectionInfo> connections = new ArrayList<>();
+
+        synchronized (getConnectionsLock()) {
+            for (AdminWrapper wrapper : connectionsToAdmin) {
+                if (wrapper == null || wrapper.getConnection() == null) {
+                    continue;
+                }
+
+                AdminConnection connection = wrapper.getConnection();
+                connections.add(new STA_ListConnections.ConnectionInfo(
+                        STA_ListConnections.ConnectionType.ADMIN,
+                        connection.getAdminId(),
+                        connection.getHostname(),
+                        connection.getPort(),
+                        connection.isConnected()
+                ));
+            }
+        }
+
+        connections.addAll(server.getClientManager().getConnectionInfos());
+        connections.addAll(server.getServerManager().getConnectionInfos());
+
+        send(from, STA_ListConnections.CreateMessage(connections));
     }
 
 

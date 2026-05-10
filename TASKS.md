@@ -5,28 +5,28 @@ Backlog derived from `docs/Sujet_Projet_IN363_V4.pdf` and a current code inspect
 ## Protocol and Frame Format
 
 - [ ] Specify the complete frame format in the repository documentation: header fields, payload fields, length/framing strategy, optional end-of-frame marker, bit widths, encoding, and error behavior.
-- [ ] Add a real destination client identifier to client data messages. `CTS_Message` currently carries only message content, so the server cannot deliver to a specific recipient.
-- [ ] Define and implement server/client error frames for unknown or unreachable destinations.
+- [x] Add a real destination client identifier to client data messages. `CTS_Message` now carries the destination client id.
+- [x] Define and implement server/client error frames for unknown or unreachable destinations.
 - [ ] Decide which frames must be forwarded unchanged and enforce that rule. The specification says a server should not modify a frame when relaying it, but the current implementation converts client messages into server/client broadcast messages.
 - [ ] Add focused tests for bit-level read/write symmetry, non-byte-aligned values, maximum values, string encoding, and invalid frame lengths.
 - [ ] Reduce or justify the current 32-bit string/byte length prefix in `Message.addBytes`; the README already notes that this is likely too large.
 
 ## Client Features
 
-- [ ] Let the user choose a destination client from known clients before sending user data. The current client prompts only for message text.
-- [ ] Maintain and display the known client list from `NEW_CLIENT` and `REMOVE_CLIENT` messages.
+- [x] Let the user choose a destination client from known clients before sending user data.
+- [x] Maintain and display the known client list from `NEW_CLIENT` and `REMOVE_CLIENT` messages.
 - [ ] Implement the client liveness response required by the specification, for example a ping/pong or heartbeat response to the server.
 - [ ] Display corruption warnings to the user when parity validation fails.
 - [ ] Make the client input loop respond cleanly to disconnection while waiting for console input. This is currently marked as a TODO in `ClientApp`.
 
 ## Server Routing and Delivery
 
-- [ ] Replace network-wide chat broadcast with addressed delivery. A message for a local client should be sent only to that client.
-- [ ] Build and maintain a routing table for remote servers and clients.
-- [ ] Implement routing-table exchange between servers during network construction.
-- [ ] Route user data to the shortest path. If several shortest paths are equal, choose the path through the lowest server id as required by the specification.
-- [ ] Notify the sending client when the destination is unknown or unreachable.
-- [ ] Propagate new-client and removed-client information across the whole server network, not only to clients connected to the same server.
+- [x] Replace network-wide chat broadcast with addressed delivery. A message for a local client should be sent only to that client.
+- [x] Build and maintain a routing table for remote servers and clients.
+- [x] Implement routing-table exchange between servers during network construction.
+- [x] Route user data to the shortest path. If several shortest paths are equal, choose the path through the lowest server id as required by the specification.
+- [x] Notify the sending client when the destination is unknown or unreachable.
+- [x] Propagate new-client and removed-client information across the whole server network, not only to clients connected to the same server.
 - [ ] Implement server liveness checks for both clients and neighbor servers. Current cleanup mostly depends on socket read errors.
 - [ ] Stop routing frames toward clients or servers that fail liveness checks, and notify the rest of the network.
 - [ ] Handle live link changes between servers by updating routing state and propagating the topology change.
@@ -73,4 +73,3 @@ Backlog derived from `docs/Sujet_Projet_IN363_V4.pdf` and a current code inspect
 - [ ] Add integration/demo scripts for a multi-server topology with at least one remote client-to-client message.
 - [ ] Verify the required compile command from `Notwork/`: `mvn compile`.
 - [ ] Add a manual demo checklist covering local delivery, remote delivery, unreachable destination, client removal, server link change, liveness timeout, and admin stop/reset.
-
