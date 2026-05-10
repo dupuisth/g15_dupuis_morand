@@ -10,13 +10,17 @@ import com.gr15.utils.ThreadUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import static com.gr15.common.Constants.SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS;
 import static com.gr15.common.Constants.SERVER_POLL_DELAY_MS;
 
 public class ServerConnectToNeighborThread extends Thread {
     private final ServerManager serverManager;
+    private final Map<ServerConfig.NeighborServerInfo, Long> nextConnectionAttemptMs = new HashMap<>();
 
     private volatile boolean shouldStop = false;
     private volatile boolean pause = false;
@@ -39,8 +43,11 @@ public class ServerConnectToNeighborThread extends Thread {
 
             ArrayList<ServerConnection> connections = serverManager.getAllConnections();
 
+            ArrayList<ServerConfig.NeighborServerInfo> configuredNeighbors = serverManager.server.getInitialConfig().getNeighbors();
+            nextConnectionAttemptMs.keySet().retainAll(configuredNeighbors);
+
             Set<ServerConfig.NeighborServerInfo> notConnected = new HashSet<>();
-            for (ServerConfig.NeighborServerInfo neighborServerInfo : serverManager.server.getInitialConfig().getNeighbors()) {
+            for (ServerConfig.NeighborServerInfo neighborServerInfo : configuredNeighbors) {
                 boolean found = false;
                 for (ServerConnection connection : connections) {
                     // Check if we are already connected
@@ -54,18 +61,25 @@ public class ServerConnectToNeighborThread extends Thread {
                 notConnected.add(neighborServerInfo);
             }
 
+            long currentTimeMs = System.currentTimeMillis();
             for (ServerConfig.NeighborServerInfo info : notConnected) {
                 // The lower serverId should initiate the connection
                 if (info.getServerId() != null && info.getServerId() < serverManager.server.getInitialConfig().getServerId()) continue;
 
+                Long nextAttemptMs = nextConnectionAttemptMs.get(info);
+                if (nextAttemptMs != null && currentTimeMs < nextAttemptMs) {
+                    continue;
+                }
 
                 ServerConnection serverConnection;
                 try {
                     serverConnection = new ServerConnection(info.getServerHostname(), info.getServerPort(), true, info.getServerId());
                 } catch (IOException e) {
-                    Logger.error("Failed to connect to neighbor server: " + info, e);
+                    nextConnectionAttemptMs.put(info, currentTimeMs + SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS);
+                    Logger.warn("Failed to connect to neighbor server, retrying in " + SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS + "ms: " + info + " (" + e.getMessage() + ")");
                     continue;
                 }
+                nextConnectionAttemptMs.remove(info);
 
                 ServerHandler handler = new ServerHandler(serverConnection, serverManager.server, info);
                 ListeningThread<ServerConnection> listener = new ListeningThread<>(serverConnection, serverManager::onMessageRead, serverManager::onListeningError);

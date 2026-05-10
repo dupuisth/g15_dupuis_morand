@@ -34,4 +34,5 @@ public class Constants {
 
     public static final int CLIENT_PING_INTERVAL_MS = 5000;
     public static final int SERVER_PING_INTERVAL_MS = 5000;
+    public static final int SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS = 5000;
 }
