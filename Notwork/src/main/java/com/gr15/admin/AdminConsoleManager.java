@@ -2,7 +2,6 @@ package com.gr15.admin;
 
 import com.gr15.Application;
 import com.gr15.admin.console.AdminConsoleConfig;
-import com.gr15.client.ClientConfig;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ProcessUtils;
 
@@ -10,6 +9,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin-side process launcher for admin consoles.
+ */
 public class AdminConsoleManager {
     private final List<AdminConsoleConfig> adminConsoles;
 

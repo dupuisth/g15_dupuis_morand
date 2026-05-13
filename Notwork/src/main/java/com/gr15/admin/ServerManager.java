@@ -1,7 +1,6 @@
 package com.gr15.admin;
 
 import com.gr15.Application;
-import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ProcessUtils;
@@ -10,6 +9,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin-side process launcher for server applications.
+ */
 public class ServerManager {
 
     private final List<ServerConfig> servers;

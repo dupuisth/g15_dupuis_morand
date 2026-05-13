@@ -11,7 +11,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Configuration for the server
+ * Startup configuration for a server node.
+ *
+ * It defines the server id, the three listening ports and the initial neighbor
+ * list. The compact argument parser is used by the admin role to launch several
+ * local nodes from one command.
  */
 public class ServerConfig {
     public static final String ARG_SERVER_ID_KEY = "serverId=";

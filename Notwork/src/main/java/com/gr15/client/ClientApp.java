@@ -16,6 +16,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Interactive client role.
+ *
+ * The client connects to one server, keeps a small local view of known client
+ * ids, sends CTS messages from user input and handles STC messages from the
+ * listening thread.
+ */
 public class ClientApp {
     private ClientConfig config;
 

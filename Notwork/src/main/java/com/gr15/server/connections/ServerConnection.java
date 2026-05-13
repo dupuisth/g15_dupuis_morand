@@ -9,6 +9,9 @@ import java.net.Socket;
 
 /**
  * Represents a server-to-server connection.
+ *
+ * Unlike client and admin connections, this class translates internal STS
+ * messages to and from the universal network protocol at the socket boundary.
  */
 public class ServerConnection extends RemoteConnection {
     private volatile Integer serverId;

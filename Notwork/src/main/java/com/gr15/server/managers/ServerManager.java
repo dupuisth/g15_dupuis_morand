@@ -24,6 +24,14 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.*;
 
+/**
+ * Manages neighbor server connections and server-to-server messages.
+ *
+ * New server sockets start in a pending state until an identity message confirms
+ * the remote server id. Routing decisions are delegated to
+ * ServerRoutingCoordinator, while this class keeps ownership of sockets, queues
+ * and connection cleanup.
+ */
 public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
     /** Array of all the servers connected (index => serverId) */
     private final ServerWrapper[] connectionsToServer = new ServerWrapper[MAX_SERVERS];

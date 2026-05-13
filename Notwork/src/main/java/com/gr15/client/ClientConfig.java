@@ -6,7 +6,10 @@ import com.gr15.server.ServerConfig;
 import java.util.ArrayList;
 
 /**
- * Represents the configuration of the client app
+ * Startup configuration for the interactive client role.
+ *
+ * A client only needs the host and client-facing port of the server it should
+ * join. The compact form is used by the admin launcher.
  */
 public class ClientConfig {
     public static final String ARG_SERVER_HOSTNAME_KEY = "hostname=";

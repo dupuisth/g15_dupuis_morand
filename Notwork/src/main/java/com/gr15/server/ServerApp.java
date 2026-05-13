@@ -8,7 +8,11 @@ import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
 
 /**
- * Application to run for the server
+ * Runtime container for one simulated server node.
+ *
+ * The server owns one manager per communication channel and coordinates them in
+ * a polling loop. Managers enqueue work from socket threads, then process those
+ * queues here on each tick.
  */
 public class ServerApp {
     private volatile boolean isStopping = false;

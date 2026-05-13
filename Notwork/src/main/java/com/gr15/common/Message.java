@@ -4,8 +4,16 @@ import com.gr15.utils.BitmaskUtils;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-// Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
-
+/**
+ * Bit-packed message buffer used by the internal protocol.
+ *
+ * A message starts with a fixed-size message id, then stores payload fields with
+ * the exact bit widths requested by each message class. Reads and writes advance
+ * independent bit cursors and are not byte-aligned by default, so typed message
+ * classes must read fields in the exact order used when writing them.
+ *
+ * Inspiration from https://github.com/RiptideNetworking/Riptide/tree/main
+ */
 public final class Message {
 
     // Length

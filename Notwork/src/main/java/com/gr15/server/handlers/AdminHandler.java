@@ -6,7 +6,10 @@ import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
 
 /**
- * Thread created when an admin connects to the server, listen for message from the admin
+ * Background behavior attached to one admin console connection.
+ *
+ * Admin commands are processed by AdminManager; this handler currently only
+ * owns the per-connection lifecycle hook for future periodic behavior.
  */
 public class AdminHandler extends Thread {
     private final AdminConnection adminConnection;

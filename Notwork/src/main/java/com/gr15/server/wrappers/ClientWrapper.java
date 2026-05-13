@@ -4,6 +4,9 @@ import com.gr15.common.listening.ListeningThread;
 import com.gr15.server.connections.ClientConnection;
 import com.gr15.server.handlers.ClientHandler;
 
+/**
+ * Runtime bundle for one client connection.
+ */
 public final class ClientWrapper extends ConnectionWrapper<ClientConnection> {
     private final ListeningThread<ClientConnection> listeningThread;
     private final ClientHandler handler;

@@ -5,7 +5,11 @@ import com.gr15.common.connections.RemoteConnection;
 import com.gr15.utils.Logger;
 
 /**
- * Thread that handle accepting on a socket
+ * Dedicated reader thread for one remote connection.
+ *
+ * The thread performs blocking reads only. Received messages and read failures
+ * are delegated to manager callbacks so socket threads do not mutate server
+ * state directly.
  */
 public class ListeningThread<T extends RemoteConnection> extends Thread {
     private final T remoteConnection;

@@ -22,6 +22,13 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.*;
 
+/**
+ * Manages clients directly connected to this server.
+ *
+ * Local clients are indexed by their local id. Incoming client messages are
+ * decoded here and then either delivered locally or delegated to ServerManager
+ * for inter-server routing.
+ */
 public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
     /** Array of all the clients connected (index => localId) */
     private final ClientWrapper[] connectionsToClient = new ClientWrapper[MAX_CLIENTS];

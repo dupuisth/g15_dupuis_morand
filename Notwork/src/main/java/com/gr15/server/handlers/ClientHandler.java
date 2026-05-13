@@ -13,7 +13,11 @@ import com.gr15.utils.ThreadUtils;
 import java.io.IOException;
 
 /**
- * Thread created when a client connects to the server, listen for message from the client
+ * Background behavior attached to one local client connection.
+ *
+ * It sends the initial hello, announces known clients, publishes local routing
+ * changes and periodically pings the client. Incoming client messages are still
+ * read by the separate ListeningThread.
  */
 public class ClientHandler extends Thread {
     private final ClientConnection clientConnection;

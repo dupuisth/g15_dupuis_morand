@@ -1,11 +1,15 @@
 package com.gr15.common.message.sts;
 
-import com.gr15.common.ClientId;
 import com.gr15.common.Message;
-import com.gr15.utils.Logger;
 import static com.gr15.common.Constants.*;
 
 
+/**
+ * Flooded chat payload with broadcast metadata.
+ *
+ * BroadcastData carries the id and TTL used by receiving servers to suppress
+ * duplicates and avoid infinite propagation loops.
+ */
 public class STS_BroadcastChat {
     public static final int ID = MessageSTS.BROADCAST_CHAT.getId();
 

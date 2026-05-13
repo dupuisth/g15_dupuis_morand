@@ -21,6 +21,12 @@ import java.util.Queue;
 
 import static com.gr15.common.Constants.*;
 
+/**
+ * Manages admin console connections for one server.
+ *
+ * Admin messages are command-oriented: list neighbors, list connections, change
+ * the neighbor configuration, reset runtime connections or stop the server.
+ */
 public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
     /** Array of all the admins connected */
     private final AdminWrapper[] connectionsToAdmin = new AdminWrapper[MAX_ADMINS];

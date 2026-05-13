@@ -12,7 +12,10 @@ import com.gr15.utils.ThreadUtils;
 import java.io.IOException;
 
 /**
- * Thread created when a server connects to the server
+ * Background behavior attached to one server-to-server connection.
+ *
+ * Before identification, it periodically sends identify messages. After the
+ * peer is known, it sends pings so failures are detected by the listening side.
  */
 public class ServerHandler extends Thread {
     private final ServerConnection serverConnection;

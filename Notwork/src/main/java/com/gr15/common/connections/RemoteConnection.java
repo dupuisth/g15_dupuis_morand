@@ -9,7 +9,12 @@ import java.io.IOException;
 import java.net.*;
 
 /**
- * Represent a connection to a remote device via a socket
+ * Base TCP connection wrapper used by clients, servers and admin consoles.
+ *
+ * It provides length-prefixed internal message reads/writes and synchronizes
+ * access to the input and output streams. Server-to-server connections override
+ * read/write to speak the universal wire protocol while keeping the same
+ * connection lifecycle API.
  */
 public abstract class RemoteConnection {
     private Socket socket;

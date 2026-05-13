@@ -12,6 +12,12 @@ import com.gr15.utils.ThreadUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin role used to launch local processes or connect to a server admin port.
+ *
+ * Compact arguments can create servers, clients and admin consoles directly.
+ * Without compact arguments, the role falls back to an interactive menu.
+ */
 public class AdminApp {
     private final ClientManager clientManager;
     private final ServerManager serverManager;

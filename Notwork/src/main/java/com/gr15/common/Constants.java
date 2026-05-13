@@ -2,6 +2,13 @@ package com.gr15.common;
 
 import com.gr15.utils.BitmaskUtils;
 
+/**
+ * Central protocol and timing constants used by all application roles.
+ *
+ * Values in this class define wire-level limits, especially bit widths for
+ * server ids, local client ids, broadcast ids and TTLs. Changing them affects
+ * message compatibility and should be paired with focused serialization tests.
+ */
 public class Constants {
     public static final int SERVER_ID_BITS = 5;
     public static final int LOCAL_ID_BITS = 4;

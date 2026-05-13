@@ -4,6 +4,12 @@ import com.gr15.common.Message;
 
 import static com.gr15.common.Constants.TOTAL_CLIENT_ID_BITS;
 
+/**
+ * Routed chat payload between servers.
+ *
+ * The source and destination are full packed client ids. ServerManager uses the
+ * destination server part to forward this message toward the next hop.
+ */
 public class STS_RoutedMessage {
     public static final int ID = MessageSTS.ROUTED_MESSAGE.getId();
 

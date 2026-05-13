@@ -3,8 +3,10 @@ package com.gr15.server.wrappers;
 import com.gr15.common.listening.ListeningThread;
 import com.gr15.server.connections.AdminConnection;
 import com.gr15.server.handlers.AdminHandler;
-import com.gr15.server.handlers.ClientHandler;
 
+/**
+ * Runtime bundle for one admin console connection.
+ */
 public final class AdminWrapper extends ConnectionWrapper<AdminConnection> {
     private final ListeningThread<AdminConnection> listeningThread;
     private final AdminHandler handler;

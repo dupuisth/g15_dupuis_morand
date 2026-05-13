@@ -13,6 +13,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 
+/**
+ * Common lifecycle for managers that accept sockets on one server port.
+ *
+ * Concrete managers create typed connections, handlers and wrappers, then keep
+ * their own queues for received messages, outgoing messages and cleanup. This
+ * base class only owns the listening server socket and accept loop.
+ */
 public abstract class Manager<T extends RemoteConnection, K extends ConnectionWrapper<T>> {
     protected final ServerApp server;
 

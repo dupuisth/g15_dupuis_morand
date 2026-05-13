@@ -14,6 +14,9 @@ import static com.gr15.common.Constants.BROADCAST_ID_LOCAL_BITS;
 /**
  * Tracks broadcast identifiers so loop prevention stays separate from socket
  * and routing concerns.
+ *
+ * The tracker rejects broadcasts created by the local server and suppresses
+ * recently seen broadcast ids until their forget window has elapsed.
  */
 class ServerBroadcastTracker {
     private final HashMap<Integer, LocalDateTime> broadcastMap = new HashMap<>();

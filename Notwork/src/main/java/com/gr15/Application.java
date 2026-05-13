@@ -11,6 +11,13 @@ import com.gr15.server.ServerConfig;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Shared entry point for the three executable roles of the simulation.
+ *
+ * The role can be selected through command-line arguments or through the
+ * interactive CLI. Keep argument parsing here small: each role owns the parsing
+ * of its role-specific configuration.
+ */
 public class Application {
     public static final String ADMIN_KEY = "admin";
     public static final String SERVER_KEY = "server";

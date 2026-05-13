@@ -8,6 +8,13 @@ import java.util.Set;
 
 import static com.gr15.common.Constants.*;
 
+/**
+ * Server-to-server routing snapshot.
+ *
+ * Each update advertises the clients hosted by one origin server and the
+ * origin's direct neighbors as bitmasks. Sequence numbers let receivers ignore
+ * stale snapshots while still tolerating wraparound.
+ */
 public class STS_RoutingUpdate {
     public static final int ID = MessageSTS.ROUTING_UPDATE.getId();
 

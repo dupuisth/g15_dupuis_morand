@@ -18,6 +18,12 @@ import java.util.Set;
 import static com.gr15.common.Constants.SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS;
 import static com.gr15.common.Constants.SERVER_POLL_DELAY_MS;
 
+/**
+ * Periodically opens missing outbound connections to configured neighbors.
+ *
+ * Only one side of a configured pair initiates the socket, based on server id
+ * ordering, to avoid duplicate server-to-server connections.
+ */
 public class ServerConnectToNeighborThread extends Thread {
     private final ServerManager serverManager;
     private final Map<ServerConfig.NeighborServerInfo, Long> nextConnectionAttemptMs = new HashMap<>();

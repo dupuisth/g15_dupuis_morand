@@ -7,7 +7,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
- * Thread that handle accepting on a socket
+ * Accept loop for one manager-owned server socket.
+ *
+ * Accepted sockets are immediately delegated to the manager-provided handler;
+ * this thread does not create typed protocol state itself.
  */
 public class SocketAcceptingThread extends Thread {
     /**
