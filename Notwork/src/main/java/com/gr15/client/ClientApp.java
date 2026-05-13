@@ -125,6 +125,10 @@ public class ClientApp {
                 STC_MessageRemoveClient parsedMessage = STC_MessageRemoveClient.ReadMessage(message);
                 handleMessage(parsedMessage);
             }
+            case PING -> {
+                STC_MessagePing parsedMessage = STC_MessagePing.ReadMessage(message);
+                handleMessage(parsedMessage);
+            }
         }
     }
 
@@ -151,6 +155,13 @@ public class ClientApp {
         Logger.debug(message.toString());
 
         CliHelper.show("[Server][RemoveClient]: clientId=" + message.getClientId());
+    }
+
+    public void handleMessage(STC_MessagePing message){
+        Logger.debug(message.toString());
+
+        CliHelper.show("[Server][Ping]: clientId=" + message.getClientId());
+        //créer un message pour que le client envoei pong
     }
 
     @Override

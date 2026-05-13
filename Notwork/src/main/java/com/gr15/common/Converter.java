@@ -5,14 +5,14 @@ public class Converter {
     /**
      * Size of a long in bytes
      */
-    public static final int BYTES_PER_LONG = 8;
+    public static final int BYTES_PER_LONG = 8; //8 octets par long
 
     /**
      * Size of a integer in bytes
      */
-    public static final int BYTES_PER_INTEGER = 4;
+    public static final int BYTES_PER_INTEGER = 4; //4 octets par int
 
-    public static final int BITS_PER_BYTE = 8;
+    public static final int BITS_PER_BYTE = 8; //8 bits par octet
     public static final int BITS_PER_LONG = BITS_PER_BYTE * BYTES_PER_LONG;
     public static final int BITS_PER_INTEGER = BITS_PER_BYTE * BYTES_PER_INTEGER;
 

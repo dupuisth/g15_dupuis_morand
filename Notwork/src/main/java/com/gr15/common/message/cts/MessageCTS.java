@@ -4,7 +4,8 @@ package com.gr15.common.message.cts;
  * Type of messages Client -> Server
  */
 public enum MessageCTS {
-    MESSAGE(0);
+    MESSAGE(0),
+    PONG(1);
 
     private final int val;
 

@@ -45,6 +45,7 @@ public class ClientHandler extends Thread {
             if (!ThreadUtils.safeSleep(1000)) {
                 break;
             }
+
         }
 
         Logger.info("Stopped Client handler");

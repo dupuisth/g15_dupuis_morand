@@ -200,6 +200,8 @@ public class ClientManager extends Manager<ClientConnection, ClientWrapper> {
             case null -> {
                 Logger.warn("Unknown message type, ignoring it (id=" + messageId + ")");
             }
+            case PONG -> {
+            }
         }
     }
 
