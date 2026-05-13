@@ -1,16 +1,18 @@
 package com.gr15.server.connections;
 
-import com.gr15.common.ClientId;
+import com.gr15.common.Message;
 import com.gr15.common.connections.RemoteConnection;
+import com.gr15.common.message.universal.UniversalMessageAdapter;
 
 import java.io.IOException;
 import java.net.Socket;
 
 /**
- * Represent a connection to a server
+ * Represents a server-to-server connection.
  */
 public class ServerConnection extends RemoteConnection {
     private volatile Integer serverId;
+    private final UniversalMessageAdapter universalMessageAdapter = new UniversalMessageAdapter();
 
     public ServerConnection(Socket socket, Integer serverId) throws IOException {
         super(socket);
@@ -28,6 +30,16 @@ public class ServerConnection extends RemoteConnection {
 
     public void setServerId(Integer serverId) {
         this.serverId = serverId;
+    }
+
+    @Override
+    public Message read() throws IOException {
+        return universalMessageAdapter.read(getIn());
+    }
+
+    @Override
+    public void send(Message message) throws IOException {
+        universalMessageAdapter.write(getOut(), message);
     }
 
     @Override

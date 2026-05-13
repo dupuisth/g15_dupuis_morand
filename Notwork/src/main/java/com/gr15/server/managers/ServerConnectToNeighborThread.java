@@ -63,7 +63,9 @@ public class ServerConnectToNeighborThread extends Thread {
 
             long currentTimeMs = System.currentTimeMillis();
             for (ServerConfig.NeighborServerInfo info : notConnected) {
-                // The lower serverId should initiate the connection
+                // Only the higher server id initiates the TCP connection. This
+                // prevents two configured neighbors from opening duplicate
+                // sockets toward each other at the same time.
                 if (info.getServerId() != null && info.getServerId() < serverManager.server.getInitialConfig().getServerId()) continue;
 
                 Long nextAttemptMs = nextConnectionAttemptMs.get(info);
@@ -73,7 +75,10 @@ public class ServerConnectToNeighborThread extends Thread {
 
                 ServerConnection serverConnection;
                 try {
-                    serverConnection = new ServerConnection(info.getServerHostname(), info.getServerPort(), true, info.getServerId());
+                    // The universal CONNECT packet is the source of truth for
+                    // the remote id, so outbound sockets also start pending
+                    // authentication.
+                    serverConnection = new ServerConnection(info.getServerHostname(), info.getServerPort(), true, null);
                 } catch (IOException e) {
                     nextConnectionAttemptMs.put(info, currentTimeMs + SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS);
                     Logger.warn("Failed to connect to neighbor server, retrying in " + SERVER_NEIGHBOR_RECONNECT_INTERVAL_MS + "ms: " + info + " (" + e.getMessage() + ")");
@@ -85,29 +90,8 @@ public class ServerConnectToNeighborThread extends Thread {
                 ListeningThread<ServerConnection> listener = new ListeningThread<>(serverConnection, serverManager::onMessageRead, serverManager::onListeningError);
                 ServerWrapper wrapper = new ServerWrapper(serverConnection, listener, handler);
 
-                if (info.getServerId() != null) {
-                    synchronized (serverManager.getConnectionsLock()) {
-                        ServerWrapper currentWrapper = serverManager.getConnections()[info.getServerId()];
-                        if (currentWrapper != null) {
-                            if (currentWrapper.getConnection() == wrapper.getConnection()) {
-                                Logger.info("Already connected to the server " + info);
-                                // OK, already registered, do nothing
-                                continue;
-                            } else {
-                                // Another connection is using the serverId, keep the old one
-                                Logger.warn("Another connection is already using the neighbor serverId, neighbor=" + info + ", parasite=" + currentWrapper.getConnection());
-                                wrapper.getConnection().close();
-                                continue;
-                            }
-                        }
-
-                        // Else, add it
-                        serverManager.getConnections()[info.getServerId()] = wrapper;
-                    }
-                } else {
-                    synchronized (serverManager.getPendingAuthentificationConnections()) {
-                        serverManager.getPendingAuthentificationConnections().add(wrapper);
-                    }
+                synchronized (serverManager.getPendingAuthentificationConnections()) {
+                    serverManager.getPendingAuthentificationConnections().add(wrapper);
                 }
 
 
