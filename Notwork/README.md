@@ -156,7 +156,8 @@ Notes:
   them to additive/subtractive topology and client-list updates per connection.
 - `DATA` compresses only the variable `Message` field with LZ78, then appends
   the required parity byte for that compressed field. The global header,
-  source and destination addresses stay uncompressed.
+  source and destination addresses stay uncompressed. LZ78 tokens are encoded
+  as 3 bytes: a 16-bit big-endian prefix index followed by the raw byte value.
 
 ## Known Limits
 

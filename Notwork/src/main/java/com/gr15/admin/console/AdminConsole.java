@@ -8,6 +8,7 @@ import com.gr15.common.message.ats.*;
 import com.gr15.common.message.sta.MessageSTA;
 import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.sta.STA_ListNeighbor;
+import com.gr15.common.message.sta.STA_ListTopology;
 import com.gr15.common.message.stc.*;
 import com.gr15.utils.Logger;
 import com.gr15.utils.ThreadUtils;
@@ -16,9 +17,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
+import static com.gr15.common.Constants.MAX_CLIENTS;
+import static com.gr15.common.Constants.MAX_SERVERS;
 
 public class AdminConsole {
     private static final int RESPONSE_TIMEOUT_SECONDS = 5;
@@ -67,10 +73,18 @@ public class AdminConsole {
         ListeningThread<Connection> listenThread = new ListeningThread<>(connection, this::onMessageReceived, this::onCriticalListeningError);
         listenThread.start();
 
-        List<MessageATS> actions = Arrays.asList(MessageATS.values());
+        List<MessageATS> actions = Arrays.asList(
+                MessageATS.LIST_TOPOLOGY,
+                MessageATS.LIST_CONNECTIONS,
+                MessageATS.LIST_NEIGHBOR,
+                MessageATS.ADD_NEIGHBOR,
+                MessageATS.REMOVE_NEIGHBOR,
+                MessageATS.RESET,
+                MessageATS.STOP
+        );
         List<String> actionsAsString = new ArrayList<>();
         for (MessageATS action : actions) {
-            actionsAsString.add(action.toString());
+            actionsAsString.add(formatAction(action));
         }
 
         // Prompt for a message
@@ -80,7 +94,7 @@ public class AdminConsole {
             // THE USER WILL NOT BE NOTIFIED UNTIL THIS END
             // todo: FIX THIS LATER
             int option = CliHelper.selectChoices("Select an action", actionsAsString);
-            MessageATS action = MessageATS.fromId(option);
+            MessageATS action = actions.get(option);
 
             switch (action) {
                 case null -> {}
@@ -109,6 +123,12 @@ public class AdminConsole {
                 case LIST_CONNECTIONS -> {
                     receivedMessages.clear();
                     if (connection.safeSend(ATS_ListConnections.CreateMessage())) {
+                        waitAndHandleResponse();
+                    }
+                }
+                case LIST_TOPOLOGY -> {
+                    receivedMessages.clear();
+                    if (connection.safeSend(ATS_ListTopology.CreateMessage())) {
                         waitAndHandleResponse();
                     }
                 }
@@ -201,7 +221,73 @@ public class AdminConsole {
                             + " status=" + status);
                 }
             }
+            case LIST_TOPOLOGY -> {
+                STA_ListTopology listTopology = STA_ListTopology.ReadMessage(message);
+                List<STA_ListTopology.ServerTopologyInfo> servers = listTopology.getServers();
+                if (servers.isEmpty()) {
+                    CliHelper.show("No topology information known.");
+                    return;
+                }
+
+                displayKnownTopology(servers);
+            }
         }
+    }
+
+    private void displayKnownTopology(List<STA_ListTopology.ServerTopologyInfo> servers) {
+        Set<Integer> knownServers = new TreeSet<>();
+        Set<String> serverConnections = new TreeSet<>();
+
+        for (STA_ListTopology.ServerTopologyInfo server : servers) {
+            knownServers.add(server.serverId());
+            for (int neighborId = 0; neighborId < MAX_SERVERS; neighborId++) {
+                if (((server.neighborMask() >> neighborId) & 1) == 0) {
+                    continue;
+                }
+
+                knownServers.add(neighborId);
+                int first = Math.min(server.serverId(), neighborId);
+                int second = Math.max(server.serverId(), neighborId);
+                serverConnections.add(first + " <-> " + second);
+            }
+        }
+
+        CliHelper.show("Known network topology:");
+        CliHelper.show("Servers: " + formatIntegerSet(knownServers));
+
+        CliHelper.show("Server connections:");
+        if (serverConnections.isEmpty()) {
+            CliHelper.show("- none");
+        } else {
+            for (String connection : serverConnections) {
+                CliHelper.show("- " + connection);
+            }
+        }
+
+        CliHelper.show("Clients:");
+        boolean hasClient = false;
+        for (STA_ListTopology.ServerTopologyInfo server : servers) {
+            String clients = formatClientMask(server.serverId(), server.clientMask());
+            if (!clients.equals("[]")) {
+                hasClient = true;
+                CliHelper.show("- serverId=" + server.serverId() + " clients=" + clients);
+            }
+        }
+        if (!hasClient) {
+            CliHelper.show("- none");
+        }
+    }
+
+    private String formatAction(MessageATS action) {
+        return switch (action) {
+            case LIST_TOPOLOGY -> "Show known topology";
+            case LIST_CONNECTIONS -> "Show active connections";
+            case LIST_NEIGHBOR -> "Show configured neighbors";
+            case ADD_NEIGHBOR -> "Add configured neighbor";
+            case REMOVE_NEIGHBOR -> "Remove configured neighbor";
+            case RESET -> "Reset runtime connections";
+            case STOP -> "Stop server";
+        };
     }
 
     private String formatConnectionId(STA_ListConnections.ConnectionInfo connection) {
@@ -214,6 +300,24 @@ public class AdminConsole {
         }
 
         return connection.id().toString();
+    }
+
+    private String formatClientMask(int serverId, int clientMask) {
+        List<String> clientIds = new ArrayList<>();
+        for (int localId = 0; localId < MAX_CLIENTS; localId++) {
+            if (((clientMask >> localId) & 1) == 1) {
+                clientIds.add(ClientId.toString(ClientId.Create(serverId, localId)));
+            }
+        }
+        return clientIds.isEmpty() ? "[]" : "[" + String.join(", ", clientIds) + "]";
+    }
+
+    private String formatIntegerSet(Set<Integer> values) {
+        List<String> strings = new ArrayList<>();
+        for (Integer value : values) {
+            strings.add(value.toString());
+        }
+        return strings.isEmpty() ? "[]" : "[" + String.join(", ", strings) + "]";
     }
 
     @Override

@@ -5,7 +5,8 @@ package com.gr15.common.message.sta;
  */
 public enum MessageSTA {
     LIST_NEIGHBOR(0),
-    LIST_CONNECTIONS(1);
+    LIST_CONNECTIONS(1),
+    LIST_TOPOLOGY(2);
 
     private final int val;
 

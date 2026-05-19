@@ -5,9 +5,11 @@ import com.gr15.common.listening.ListeningThread;
 import com.gr15.common.message.ats.*;
 import com.gr15.common.message.sta.STA_ListConnections;
 import com.gr15.common.message.sta.STA_ListNeighbor;
+import com.gr15.common.message.sta.STA_ListTopology;
 import com.gr15.server.ServerApp;
 import com.gr15.server.ServerConfig;
 import com.gr15.server.connections.AdminConnection;
+import com.gr15.server.routing.RoutingSnapshot;
 import com.gr15.server.wrappers.AdminWrapper;
 import com.gr15.server.handlers.AdminHandler;
 import com.gr15.utils.Logger;
@@ -15,6 +17,7 @@ import com.gr15.utils.Logger;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -199,6 +202,9 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
             case LIST_CONNECTIONS -> {
                 handleMessage(fromAdmin, ATS_ListConnections.ReadMessage(message));
             }
+            case LIST_TOPOLOGY -> {
+                handleMessage(fromAdmin, ATS_ListTopology.ReadMessage(message));
+            }
         }
     }
 
@@ -256,6 +262,21 @@ public class AdminManager extends Manager<AdminConnection, AdminWrapper> {
         connections.addAll(server.getServerManager().getConnectionInfos());
 
         send(from, STA_ListConnections.CreateMessage(connections));
+    }
+
+    private void handleMessage(AdminConnection from, ATS_ListTopology message) {
+        List<STA_ListTopology.ServerTopologyInfo> servers = new ArrayList<>();
+        for (RoutingSnapshot snapshot : server.getServerManager().getKnownRoutingSnapshots()) {
+            servers.add(new STA_ListTopology.ServerTopologyInfo(
+                    snapshot.originServerId(),
+                    snapshot.sequence(),
+                    snapshot.clientMask(),
+                    snapshot.neighborMask()
+            ));
+        }
+        servers.sort(Comparator.comparingInt(STA_ListTopology.ServerTopologyInfo::serverId));
+
+        send(from, STA_ListTopology.CreateMessage(servers));
     }
 
 

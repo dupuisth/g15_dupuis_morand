@@ -11,6 +11,7 @@ public final class Logger {
     public enum Level {
         DEBUG(0, "\u001B[37m"), // blanc / gris
         INFO(1, "\u001B[32m"),  // vert
+        UNIVERSAL(1, "\u001B[36m"), // cyan
         WARN(2, "\u001B[33m"),  // jaune
         ERROR(3, "\u001B[31m"), // rouge
         NONE(4, "");            // rien affiché
@@ -79,6 +80,10 @@ public final class Logger {
 
     public static void info(String message) {
         log(Level.INFO, message, null);
+    }
+
+    public static void universal(String message) {
+        log(Level.UNIVERSAL, message, null);
     }
 
     public static void warn(String message) {

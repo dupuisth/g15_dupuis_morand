@@ -14,6 +14,7 @@ import com.gr15.common.message.sts.STS_RoutedMessage;
 import com.gr15.common.message.sts.STS_RoutingUpdate;
 import com.gr15.server.ServerApp;
 import com.gr15.server.connections.ServerConnection;
+import com.gr15.server.routing.RoutingSnapshot;
 import com.gr15.server.wrappers.ServerWrapper;
 import static com.gr15.common.Constants.*;
 
@@ -356,6 +357,10 @@ public class ServerManager extends Manager<ServerConnection, ServerWrapper> {
 
     public Set<Integer> getKnownClientIds() {
         return routingCoordinator.getKnownClientIds();
+    }
+
+    public List<RoutingSnapshot> getKnownRoutingSnapshots() {
+        return routingCoordinator.getKnownSnapshots();
     }
 
     private void sendKnownRoutingTable(ServerConnection serverConnection) {

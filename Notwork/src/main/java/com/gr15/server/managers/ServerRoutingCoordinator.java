@@ -13,6 +13,7 @@ import com.gr15.server.routing.RoutingTable;
 import com.gr15.server.wrappers.ServerWrapper;
 import com.gr15.utils.Logger;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -35,6 +36,9 @@ class ServerRoutingCoordinator {
 
         int destinationServerId = ClientId.GetServerId(routedMessage.getDestinationClientId());
         if (destinationServerId == server.getInitialConfig().getServerId()) {
+            Logger.info("[ROUTING] Delivering routed message locally from="
+                    + ClientId.toString(routedMessage.getFromClientId())
+                    + " to=" + ClientId.toString(routedMessage.getDestinationClientId()));
             boolean delivered = server.getClientManager().sendClientMessage(
                     routedMessage.getFromClientId(),
                     routedMessage.getDestinationClientId(),
@@ -42,6 +46,8 @@ class ServerRoutingCoordinator {
             );
 
             if (!delivered) {
+                Logger.warn("[ROUTING] Local destination client is disconnected, sending error to="
+                        + ClientId.toString(routedMessage.getFromClientId()));
                 routeClientError(
                         routedMessage.getFromClientId(),
                         routedMessage.getDestinationClientId(),
@@ -53,6 +59,11 @@ class ServerRoutingCoordinator {
 
         ServerConnection nextHop = getNextHopConnection(destinationServerId);
         if (nextHop == null || nextHop == fromServer) {
+            Logger.warn("[ROUTING] Cannot forward message from="
+                    + ClientId.toString(routedMessage.getFromClientId())
+                    + " to=" + ClientId.toString(routedMessage.getDestinationClientId())
+                    + " destinationServer=" + destinationServerId
+                    + " nextHop=" + nextHop);
             routeClientError(
                     routedMessage.getFromClientId(),
                     routedMessage.getDestinationClientId(),
@@ -61,6 +72,11 @@ class ServerRoutingCoordinator {
             return;
         }
 
+        Logger.info("[ROUTING] Forwarding routed message from="
+                + ClientId.toString(routedMessage.getFromClientId())
+                + " to=" + ClientId.toString(routedMessage.getDestinationClientId())
+                + " destinationServer=" + destinationServerId
+                + " nextHopServer=" + nextHop.getServerId());
         serverManager.send(nextHop, STS_RoutedMessage.CreateMessage(
                 routedMessage.getFromClientId(),
                 routedMessage.getDestinationClientId(),
@@ -73,6 +89,9 @@ class ServerRoutingCoordinator {
 
         int recipientServerId = ClientId.GetServerId(routedError.getRecipientClientId());
         if (recipientServerId == server.getInitialConfig().getServerId()) {
+            Logger.info("[ROUTING] Delivering routed error locally recipient="
+                    + ClientId.toString(routedError.getRecipientClientId())
+                    + " destination=" + ClientId.toString(routedError.getDestinationClientId()));
             server.getClientManager().sendError(
                     routedError.getRecipientClientId(),
                     routedError.getDestinationClientId(),
@@ -83,10 +102,17 @@ class ServerRoutingCoordinator {
 
         ServerConnection nextHop = getNextHopConnection(recipientServerId);
         if (nextHop == null || nextHop == fromServer) {
-            Logger.warn("Cannot route error back to " + ClientId.toString(routedError.getRecipientClientId()));
+            Logger.warn("[ROUTING] Cannot route error back to "
+                    + ClientId.toString(routedError.getRecipientClientId())
+                    + " recipientServer=" + recipientServerId
+                    + " nextHop=" + nextHop);
             return;
         }
 
+        Logger.info("[ROUTING] Forwarding routed error recipient="
+                + ClientId.toString(routedError.getRecipientClientId())
+                + " destination=" + ClientId.toString(routedError.getDestinationClientId())
+                + " nextHopServer=" + nextHop.getServerId());
         serverManager.send(nextHop, STS_RoutedError.CreateMessage(
                 routedError.getRecipientClientId(),
                 routedError.getDestinationClientId(),
@@ -99,9 +125,18 @@ class ServerRoutingCoordinator {
 
         boolean accepted = applyRoutingUpdate(routingUpdate);
         if (!accepted) {
+            Logger.info("[ROUTING] Ignored stale routing update originServer="
+                    + routingUpdate.getOriginServerId()
+                    + " sequence=" + routingUpdate.getSequence());
             return;
         }
 
+        Logger.info("[ROUTING] Accepted routing update originServer="
+                + routingUpdate.getOriginServerId()
+                + " sequence=" + routingUpdate.getSequence()
+                + " clientMask=" + routingUpdate.getClientMask()
+                + " neighborMask=" + routingUpdate.getNeighborMask()
+                + ", forwarding to other neighbors");
         serverManager.sendToAll(STS_RoutingUpdate.CreateMessage(
                 routingUpdate.getOriginServerId(),
                 routingUpdate.getSequence(),
@@ -114,18 +149,31 @@ class ServerRoutingCoordinator {
         int destinationServerId = ClientId.GetServerId(destinationClientId);
 
         if (destinationServerId == server.getInitialConfig().getServerId()) {
+            Logger.info("[ROUTING] Client message stays local from="
+                    + ClientId.toString(fromClientId)
+                    + " to=" + ClientId.toString(destinationClientId));
             return server.getClientManager().sendClientMessage(fromClientId, destinationClientId, content);
         }
 
         if (!routingTable.isKnownClient(destinationClientId)) {
+            Logger.warn("[ROUTING] Unknown destination client="
+                    + ClientId.toString(destinationClientId)
+                    + " for source=" + ClientId.toString(fromClientId));
             return false;
         }
 
         ServerConnection nextHop = getNextHopConnection(destinationServerId);
         if (nextHop == null) {
+            Logger.warn("[ROUTING] No next hop for destinationServer=" + destinationServerId
+                    + " destinationClient=" + ClientId.toString(destinationClientId));
             return false;
         }
 
+        Logger.info("[ROUTING] Routing client message from="
+                + ClientId.toString(fromClientId)
+                + " to=" + ClientId.toString(destinationClientId)
+                + " destinationServer=" + destinationServerId
+                + " nextHopServer=" + nextHop.getServerId());
         serverManager.send(nextHop, STS_RoutedMessage.CreateMessage(fromClientId, destinationClientId, content));
         return true;
     }
@@ -134,15 +182,25 @@ class ServerRoutingCoordinator {
         int recipientServerId = ClientId.GetServerId(recipientClientId);
 
         if (recipientServerId == server.getInitialConfig().getServerId()) {
+            Logger.info("[ROUTING] Client error stays local recipient="
+                    + ClientId.toString(recipientClientId)
+                    + " destination=" + ClientId.toString(destinationClientId));
             server.getClientManager().sendError(recipientClientId, destinationClientId, errorMessage);
             return true;
         }
 
         ServerConnection nextHop = getNextHopConnection(recipientServerId);
         if (nextHop == null) {
+            Logger.warn("[ROUTING] No next hop for routed error recipient="
+                    + ClientId.toString(recipientClientId)
+                    + " recipientServer=" + recipientServerId);
             return false;
         }
 
+        Logger.info("[ROUTING] Routing client error recipient="
+                + ClientId.toString(recipientClientId)
+                + " destination=" + ClientId.toString(destinationClientId)
+                + " nextHopServer=" + nextHop.getServerId());
         serverManager.send(nextHop, STS_RoutedError.CreateMessage(recipientClientId, destinationClientId, errorMessage));
         return true;
     }
@@ -152,6 +210,11 @@ class ServerRoutingCoordinator {
         int clientMask = server.getClientManager().getLocalClientMask();
         int neighborMask = getConnectedNeighborMask();
         RoutingSnapshot snapshot = routingTable.updateLocal(server.getClientManager().getLocalClientIds(), clientMask, neighborMask);
+        Logger.info("[ROUTING] Publishing local routing update originServer="
+                + localServerId
+                + " sequence=" + snapshot.sequence()
+                + " clientMask=" + clientMask
+                + " neighborMask=" + neighborMask);
         serverManager.sendToAll(STS_RoutingUpdate.CreateMessage(localServerId, snapshot.sequence(), clientMask, neighborMask));
     }
 
@@ -161,11 +224,21 @@ class ServerRoutingCoordinator {
         return allClients;
     }
 
+    List<RoutingSnapshot> getKnownSnapshots() {
+        return routingTable.getKnownSnapshots();
+    }
+
     void sendKnownRoutingTable(ServerConnection serverConnection) {
         for (RoutingSnapshot snapshot : routingTable.getKnownSnapshots()) {
             if (snapshot.sequence() < 0) {
                 continue;
             }
+            Logger.info("[ROUTING] Sending known routing snapshot to server="
+                    + serverConnection.getServerId()
+                    + " originServer=" + snapshot.originServerId()
+                    + " sequence=" + snapshot.sequence()
+                    + " clientMask=" + snapshot.clientMask()
+                    + " neighborMask=" + snapshot.neighborMask());
             serverManager.send(serverConnection, STS_RoutingUpdate.CreateMessage(
                     snapshot.originServerId(),
                     snapshot.sequence(),

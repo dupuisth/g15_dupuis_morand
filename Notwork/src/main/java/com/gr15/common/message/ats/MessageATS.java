@@ -9,7 +9,8 @@ public enum MessageATS {
     REMOVE_NEIGHBOR(2),
     STOP(3),
     RESET(4),
-    LIST_CONNECTIONS(5);
+    LIST_CONNECTIONS(5),
+    LIST_TOPOLOGY(6);
 
 
 

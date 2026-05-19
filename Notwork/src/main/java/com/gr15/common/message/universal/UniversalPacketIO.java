@@ -1,5 +1,7 @@
 package com.gr15.common.message.universal;
 
+import com.gr15.utils.Logger;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -19,6 +21,8 @@ public final class UniversalPacketIO {
     public static UniversalPacket read(DataInputStream in) throws IOException {
         int magic = in.readInt();
         if (magic != UniversalPacket.MAGIC) {
+            Logger.universal("Received invalid universal magic=" + magic
+                    + " expected=" + UniversalPacket.MAGIC);
             throw new IOException("Invalid universal protocol magic: " + magic);
         }
 
@@ -28,10 +32,23 @@ public final class UniversalPacketIO {
         int typeId = in.readUnsignedByte();
         UniversalMessageType type = UniversalMessageType.fromId(typeId);
         if (type == null) {
+            Logger.universal("Received universal header with unknown typeId=" + typeId
+                    + " id=" + id
+                    + " ttl=" + ttl
+                    + " option=" + option);
             throw new IOException("Unknown universal message type: " + typeId);
         }
 
-        return new UniversalPacket(id, ttl, option, type, readPayload(in, type));
+        Logger.universal("Received universal header id=" + id
+                + " ttl=" + ttl
+                + " option=" + option
+                + " type=" + type
+                + " typeId=" + typeId);
+
+        byte[] payload = readPayload(in, type);
+        Logger.universal("Received universal payload type=" + type
+                + " payloadBytes=" + payload.length);
+        return new UniversalPacket(id, ttl, option, type, payload);
     }
 
     public static void write(DataOutputStream out, UniversalPacket packet) throws IOException {

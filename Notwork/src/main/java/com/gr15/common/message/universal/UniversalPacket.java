@@ -28,10 +28,6 @@ public class UniversalPacket {
         this.payload = payload == null ? new byte[0] : Arrays.copyOf(payload, payload.length);
     }
 
-    public static UniversalPacket create(UniversalMessageType type, byte[] payload) {
-        return new UniversalPacket(0, DEFAULT_TTL, DEFAULT_OPTION, type, payload);
-    }
-
     public int getId() {
         return id;
     }

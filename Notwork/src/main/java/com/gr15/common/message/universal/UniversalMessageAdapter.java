@@ -9,6 +9,7 @@ import com.gr15.common.message.sts.STS_Pong;
 import com.gr15.common.message.sts.STS_RoutedError;
 import com.gr15.common.message.sts.STS_RoutedMessage;
 import com.gr15.common.message.sts.STS_RoutingUpdate;
+import com.gr15.utils.Logger;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -53,6 +54,7 @@ public class UniversalMessageAdapter {
      */
     private final Map<Integer, Integer> sentClientMasks = new HashMap<>();
     private final Map<Integer, Integer> sentNeighborMasks = new HashMap<>();
+    private int nextOutgoingPacketId = 0;
 
     /**
      * Reads one universal packet from the stream and returns the next internal
@@ -62,21 +64,29 @@ public class UniversalMessageAdapter {
         synchronized (pendingMessages) {
             Message pending = pendingMessages.poll();
             if (pending != null) {
+                Logger.universal("Delivering queued internal message type=" + messageTypeName(pending));
                 return pending;
             }
         }
 
         UniversalPacket packet = UniversalPacketIO.read(in);
+        Logger.universal("Received packet " + packetSummary(packet));
         Message converted = toLocalMessage(packet);
         synchronized (pendingMessages) {
             Message pending = pendingMessages.poll();
             if (converted == null && pending != null) {
+                Logger.universal("Converted packet type=" + packet.getType()
+                        + " to queued internal message type=" + messageTypeName(pending));
                 return pending;
             }
         }
         if (converted == null) {
+            Logger.universal("Packet type=" + packet.getType()
+                    + " produced no direct internal message, emitting internal PING placeholder");
             return STS_Ping.CreateMessage();
         }
+        Logger.universal("Converted packet type=" + packet.getType()
+                + " to internal message type=" + messageTypeName(converted));
         return converted;
     }
 
@@ -84,8 +94,19 @@ public class UniversalMessageAdapter {
      * Converts one internal STS message into zero, one, or several universal
      * packets and writes them to the stream.
      */
-    public void write(DataOutputStream out, Message message) throws IOException {
-        for (UniversalPacket packet : toUniversalPackets(message)) {
+    public synchronized void write(DataOutputStream out, Message message) throws IOException {
+        String sourceType = messageTypeName(message);
+        UniversalPacket[] packets = toUniversalPackets(message);
+        if (packets.length == 0) {
+            Logger.universal("Internal message type=" + sourceType
+                    + " has no universal equivalent, nothing sent");
+            return;
+        }
+
+        Logger.universal("Sending internal message type=" + sourceType
+                + " as " + packets.length + " universal packet(s)");
+        for (UniversalPacket packet : packets) {
+            Logger.universal("Sending packet " + packetSummary(packet));
             UniversalPacketIO.write(out, packet);
         }
     }
@@ -98,6 +119,7 @@ public class UniversalMessageAdapter {
                     int remoteServerId = UniversalAddresses.parseServerAddress(
                             UniversalAddresses.ascii(payload)
                     );
+                    Logger.universal("CONNECT identifies remote server=" + remoteServerId);
                     yield STS_Identify.CreateMessage(remoteServerId, 1);
                 }
                 case PING -> STS_Ping.CreateMessage();
@@ -123,6 +145,8 @@ public class UniversalMessageAdapter {
         byte[] compressedContentBytes = slice(payload, contentOffset, size);
         int parity = payload[contentOffset + size] & 0xff;
         if (parity != UniversalPacketIO.parity(compressedContentBytes)) {
+            Logger.universal("DATA parity mismatch source=" + source
+                    + " destination=" + destination + " size=" + size);
             // Parity errors become routed errors so the failure follows the
             // same delivery path as other server-to-server message errors.
             return STS_RoutedError.CreateMessage(
@@ -132,6 +156,10 @@ public class UniversalMessageAdapter {
             );
         }
         byte[] contentBytes = LZ78Codec.decompress(compressedContentBytes);
+        Logger.universal("DATA source=" + source
+                + " destination=" + destination
+                + " compressedBytes=" + size
+                + " contentBytes=" + contentBytes.length);
         return STS_RoutedMessage.CreateMessage(
                 UniversalAddresses.parseClientAddress(source),
                 UniversalAddresses.parseClientAddress(destination),
@@ -143,6 +171,9 @@ public class UniversalMessageAdapter {
         String source = UniversalAddresses.ascii(slice(payload, 0, UniversalAddresses.CLIENT_ADDRESS_BYTES));
         String destination = UniversalAddresses.ascii(slice(payload, UniversalAddresses.CLIENT_ADDRESS_BYTES, UniversalAddresses.CLIENT_ADDRESS_BYTES));
         int code = UniversalPacketIO.readInt(payload, UniversalAddresses.CLIENT_ADDRESS_BYTES * 2);
+        Logger.universal("ERROR source=" + source
+                + " destination=" + destination
+                + " code=" + code);
         return STS_RoutedError.CreateMessage(
                 UniversalAddresses.parseClientAddress(source),
                 UniversalAddresses.parseClientAddress(destination),
@@ -152,6 +183,8 @@ public class UniversalMessageAdapter {
 
     private Message readUniversalTopology(byte[] payload) {
         StringLists lists = readStringLists(payload);
+        Logger.universal("TOPOLOGY add='" + lists.additive()
+                + "' remove='" + lists.subtractive() + "'");
         Set<Integer> changedServers = new HashSet<>();
         applyTopologyList(lists.additive(), true, changedServers);
         applyTopologyList(lists.subtractive(), false, changedServers);
@@ -161,6 +194,8 @@ public class UniversalMessageAdapter {
 
     private Message readUniversalClientList(byte[] payload) {
         StringLists lists = readStringLists(payload);
+        Logger.universal("LIST_CLIENT add='" + lists.additive()
+                + "' remove='" + lists.subtractive() + "'");
         Set<Integer> changedServers = new HashSet<>();
         applyClientList(lists.additive(), true, changedServers);
         applyClientList(lists.subtractive(), false, changedServers);
@@ -180,19 +215,19 @@ public class UniversalMessageAdapter {
             case IDENTIFY -> {
                 STS_Identify identify = STS_Identify.ReadMessage(message);
                 yield new UniversalPacket[] {
-                        UniversalPacket.create(UniversalMessageType.CONNECT, UniversalPacketIO.connectPayload(identify.getFromServerId()))
+                        createOutgoingPacket(UniversalMessageType.CONNECT, UniversalPacketIO.connectPayload(identify.getFromServerId()))
                 };
             }
             case PING -> new UniversalPacket[] {
-                    UniversalPacket.create(UniversalMessageType.PING, UniversalPacketIO.routedClientsPayload(0, 0))
+                    createOutgoingPacket(UniversalMessageType.PING, UniversalPacketIO.routedClientsPayload(0, 0))
             };
             case PONG -> new UniversalPacket[] {
-                    UniversalPacket.create(UniversalMessageType.PONG, UniversalPacketIO.routedClientsPayload(0, 0))
+                    createOutgoingPacket(UniversalMessageType.PONG, UniversalPacketIO.routedClientsPayload(0, 0))
             };
             case ROUTED_MESSAGE -> {
                 STS_RoutedMessage routed = STS_RoutedMessage.ReadMessage(message);
                 yield new UniversalPacket[] {
-                        UniversalPacket.create(UniversalMessageType.DATA, UniversalPacketIO.dataPayload(
+                        createOutgoingPacket(UniversalMessageType.DATA, UniversalPacketIO.dataPayload(
                                 routed.getFromClientId(),
                                 routed.getDestinationClientId(),
                                 routed.getContent()
@@ -202,7 +237,7 @@ public class UniversalMessageAdapter {
             case ROUTED_ERROR -> {
                 STS_RoutedError error = STS_RoutedError.ReadMessage(message);
                 yield new UniversalPacket[] {
-                        UniversalPacket.create(UniversalMessageType.ERROR, UniversalPacketIO.errorPayload(
+                        createOutgoingPacket(UniversalMessageType.ERROR, UniversalPacketIO.errorPayload(
                                 error.getRecipientClientId(),
                                 error.getDestinationClientId(),
                                 500
@@ -233,9 +268,13 @@ public class UniversalMessageAdapter {
         String clientsRemove = clientList(originServerId, previousClientMask & ~update.getClientMask());
 
         return new UniversalPacket[] {
-                UniversalPacket.create(UniversalMessageType.TOPOLOGY, UniversalPacketIO.twoStringsPayload(topologyAdd, topologyRemove)),
-                UniversalPacket.create(UniversalMessageType.LIST_CLIENT, UniversalPacketIO.twoStringsPayload(clientsAdd, clientsRemove))
+                createOutgoingPacket(UniversalMessageType.TOPOLOGY, UniversalPacketIO.twoStringsPayload(topologyAdd, topologyRemove)),
+                createOutgoingPacket(UniversalMessageType.LIST_CLIENT, UniversalPacketIO.twoStringsPayload(clientsAdd, clientsRemove))
         };
+    }
+
+    private UniversalPacket createOutgoingPacket(UniversalMessageType type, byte[] payload) {
+        return new UniversalPacket(nextOutgoingPacketId++, UniversalPacket.DEFAULT_TTL, UniversalPacket.DEFAULT_OPTION, type, payload);
     }
 
     private void applyTopologyList(String list, boolean additive, Set<Integer> changedServers) {
@@ -294,6 +333,11 @@ public class UniversalMessageAdapter {
                 // RoutingTable can still reject stale repeats.
                 int sequence = receivedSequences.getOrDefault(changedServer, -1) + 1;
                 receivedSequences.put(changedServer, sequence);
+                Logger.universal("Queued routing update from universal state originServer="
+                        + changedServer
+                        + " sequence=" + sequence
+                        + " clientMask=" + receivedClientMasks.getOrDefault(changedServer, 0)
+                        + " neighborMask=" + receivedNeighborMasks.getOrDefault(changedServer, 0));
                 pendingMessages.add(STS_RoutingUpdate.CreateMessage(
                         changedServer,
                         sequence,
@@ -358,6 +402,56 @@ public class UniversalMessageAdapter {
         byte[] bytes = new byte[source.getWrittenByte()];
         System.arraycopy(source.getData(), 0, bytes, 0, bytes.length);
         return new Message(bytes);
+    }
+
+    private String messageTypeName(Message source) {
+        Message copy = copyForReading(source);
+        int messageId = copy.readInt(Message.MESSAGE_ID_BITS);
+        MessageSTS type = MessageSTS.fromId(messageId);
+        if (type == null) {
+            return "UNKNOWN(" + messageId + ")";
+        }
+        return type.name();
+    }
+
+    private String packetSummary(UniversalPacket packet) {
+        return "type=" + packet.getType()
+                + " id=" + packet.getId()
+                + " ttl=" + packet.getTtl()
+                + " option=" + packet.getOption()
+                + " payloadBytes=" + packet.getPayload().length
+                + " " + packetPayloadSummary(packet);
+    }
+
+    private String packetPayloadSummary(UniversalPacket packet) {
+        byte[] payload = packet.getPayload();
+        return switch (packet.getType()) {
+            case CONNECT -> "server=" + UniversalAddresses.ascii(payload);
+            case PING, PONG -> routedClientsSummary(payload);
+            case DATA -> dataPayloadSummary(payload);
+            case ERROR -> errorPayloadSummary(payload);
+            case TOPOLOGY, LIST_CLIENT -> stringListsSummary(payload);
+        };
+    }
+
+    private String routedClientsSummary(byte[] payload) {
+        return "source=" + UniversalAddresses.ascii(slice(payload, 0, UniversalAddresses.CLIENT_ADDRESS_BYTES))
+                + " destination=" + UniversalAddresses.ascii(slice(payload, UniversalAddresses.CLIENT_ADDRESS_BYTES, UniversalAddresses.CLIENT_ADDRESS_BYTES));
+    }
+
+    private String dataPayloadSummary(byte[] payload) {
+        int size = UniversalPacketIO.readInt(payload, UniversalAddresses.CLIENT_ADDRESS_BYTES * 2);
+        return routedClientsSummary(payload) + " compressedBytes=" + size;
+    }
+
+    private String errorPayloadSummary(byte[] payload) {
+        int code = UniversalPacketIO.readInt(payload, UniversalAddresses.CLIENT_ADDRESS_BYTES * 2);
+        return routedClientsSummary(payload) + " code=" + code;
+    }
+
+    private String stringListsSummary(byte[] payload) {
+        StringLists lists = readStringLists(payload);
+        return "add='" + lists.additive() + "' remove='" + lists.subtractive() + "'";
     }
 
     private record StringLists(String additive, String subtractive) {
