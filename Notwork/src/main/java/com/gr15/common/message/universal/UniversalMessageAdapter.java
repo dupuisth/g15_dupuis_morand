@@ -120,9 +120,9 @@ public class UniversalMessageAdapter {
         if (size < 0 || contentOffset + size >= payload.length) {
             throw new IOException("Invalid universal DATA payload size: " + size);
         }
-        byte[] contentBytes = slice(payload, contentOffset, size);
+        byte[] compressedContentBytes = slice(payload, contentOffset, size);
         int parity = payload[contentOffset + size] & 0xff;
-        if (parity != UniversalPacketIO.parity(contentBytes)) {
+        if (parity != UniversalPacketIO.parity(compressedContentBytes)) {
             // Parity errors become routed errors so the failure follows the
             // same delivery path as other server-to-server message errors.
             return STS_RoutedError.CreateMessage(
@@ -131,6 +131,7 @@ public class UniversalMessageAdapter {
                     "Universal DATA parity mismatch"
             );
         }
+        byte[] contentBytes = LZ78Codec.decompress(compressedContentBytes);
         return STS_RoutedMessage.CreateMessage(
                 UniversalAddresses.parseClientAddress(source),
                 UniversalAddresses.parseClientAddress(destination),

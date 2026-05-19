@@ -119,10 +119,11 @@ public final class UniversalPacketIO {
         ByteArrayOutputStream payload = new ByteArrayOutputStream();
         payload.writeBytes(routedClientsPayload(sourceClientId, destinationClientId));
         byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
-        writeInt(payload, contentBytes.length);
-        payload.writeBytes(contentBytes);
-        // The specification requires one parity byte after DATA content.
-        payload.write(parity(contentBytes));
+        byte[] compressedContent = LZ78Codec.compress(contentBytes);
+        writeInt(payload, compressedContent.length);
+        payload.writeBytes(compressedContent);
+        // The specification requires one parity byte after the encoded DATA content.
+        payload.write(parity(compressedContent));
         return payload.toByteArray();
     }
 

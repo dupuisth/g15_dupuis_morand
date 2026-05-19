@@ -154,9 +154,9 @@ Notes:
 - Universal client addresses use `Sxx_Cx`.
 - Internal routing uses full bitmask snapshots; the universal adapter converts
   them to additive/subtractive topology and client-list updates per connection.
-- `DATA` currently sends the existing UTF-8 payload and appends the required
-  parity byte. The specification mentions LZ78, but does not define the exact
-  binary encoding used for the compressed payload.
+- `DATA` compresses only the variable `Message` field with LZ78, then appends
+  the required parity byte for that compressed field. The global header,
+  source and destination addresses stay uncompressed.
 
 ## Known Limits
 

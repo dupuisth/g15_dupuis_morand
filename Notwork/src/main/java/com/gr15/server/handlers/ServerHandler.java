@@ -42,6 +42,7 @@ public class ServerHandler extends Thread {
             }
 
             int sleepTime = Math.max(2 * Constants.SERVER_POLL_DELAY_MS, Constants.SERVER_PING_INTERVAL_MS);
+
             if (!ThreadUtils.safeSleep(sleepTime)) {
                 break;
             }
